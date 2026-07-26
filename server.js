@@ -184,6 +184,17 @@ app.post('/api/withdraw', async (req, res) => {
     }
 });
 
+app.get('/api/transactions', async (req, res) => {
+    const userId = req.headers.authorization;
+    if (!userId) return res.json({ success: false });
+    try {
+        const txs = await Transaction.find({ userId }).sort({ createdAt: -1 });
+        res.json({ success: true, transactions: txs });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
 function calculateWinningResult() {
   if (forcedResult !== null) {
     const res = forcedResult;
