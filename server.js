@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 
 const User = require('./models/User');
 const Game = require('./models/Game');
+const Transaction = require('./models/Transaction');
 
 const app = express();
 const server = http.createServer(app);
@@ -128,6 +129,58 @@ app.post('/api/upload-avatar', async (req, res) => {
         }
     } catch (e) {
         res.json({ success: false });
+    }
+});
+
+app.post('/api/deposit', async (req, res) => {
+    const userId = req.headers.authorization;
+    const { amount, referenceNumber } = req.body;
+    if (!userId || !amount || !referenceNumber || amount < 10) return res.json({ success: false, message: 'Invalid details or amount too low (Min $10).' });
+    
+    try {
+        const user = await User.findById(userId);
+        if (!user) return res.json({ success: false, message: 'User not found.' });
+
+        const newTx = new Transaction({
+            userId,
+            type: 'deposit',
+            amount: parseFloat(amount),
+            status: 'pending',
+            referenceNumber
+        });
+        await newTx.save();
+        res.json({ success: true, message: 'Deposit request submitted successfully! Pending approval.' });
+    } catch (err) {
+        res.json({ success: false, message: 'Database error.' });
+    }
+});
+
+app.post('/api/withdraw', async (req, res) => {
+    const userId = req.headers.authorization;
+    const { amount, withdrawalAddress, pin } = req.body;
+    if (!userId || !amount || !withdrawalAddress || !pin || amount < 10) return res.json({ success: false, message: 'Invalid details or amount too low (Min $10).' });
+    
+    try {
+        const user = await User.findById(userId);
+        if (!user) return res.json({ success: false, message: 'User not found.' });
+        if (user.pin !== pin) return res.json({ success: false, message: 'Incorrect Withdrawal PIN.' });
+        if (user.balance < parseFloat(amount)) return res.json({ success: false, message: 'Insufficient balance.' });
+
+        user.balance -= parseFloat(amount);
+        await user.save();
+
+        const newTx = new Transaction({
+            userId,
+            type: 'withdraw',
+            amount: parseFloat(amount),
+            status: 'pending',
+            withdrawalAddress
+        });
+        await newTx.save();
+        
+        res.json({ success: true, message: 'Withdrawal request submitted successfully! Pending approval.', newBalance: user.balance });
+    } catch (err) {
+        res.json({ success: false, message: 'Database error.' });
     }
 });
 

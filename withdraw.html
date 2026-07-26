@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>888.lk - Withdraw</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0b1526; color: #ffffff; font-family: 'Roboto', sans-serif; }
+        .header-bg { background-color: #0e1a30; border-bottom: 1px solid #1a2942; }
+        .card { background-color: #121e36; border-radius: 8px; border: 1px solid #1a2942; }
+        .input-field { background-color: #0e1a30; border: 1px solid #1a2942; color: white; transition: all 0.2s; }
+        .input-field:focus { border-color: #2196f3; outline: none; }
+    </style>
+</head>
+<body class="max-w-md mx-auto min-h-screen relative select-none">
+    
+    <header class="flex justify-between items-center px-4 py-4 header-bg sticky top-0 z-40">
+        <a href="mine.html" class="text-gray-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <div class="text-xl font-bold">Withdraw USDT</div>
+        <div class="w-6"></div>
+    </header>
+
+    <main class="p-4 pb-20">
+        
+        <div class="card p-5 mb-4 text-center relative overflow-hidden">
+            <div class="absolute -left-10 -top-10 w-32 h-32 bg-blue-500 rounded-full opacity-10 blur-xl"></div>
+            
+            <div class="text-gray-400 text-sm mb-1">Available Balance</div>
+            <div class="text-3xl font-bold text-white mb-2" id="current-balance">Loading...</div>
+            <div class="text-xs text-blue-400 bg-blue-900/30 inline-block px-2 py-1 rounded border border-blue-800">
+                Minimum Withdrawal: $10.00
+            </div>
+        </div>
+
+        <form id="withdrawForm" class="card p-5 space-y-4">
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1 flex items-center justify-between">
+                    Withdrawal Amount (USDT)
+                    <span class="text-xs text-[#2196f3] cursor-pointer" onclick="withdrawAll()">Withdraw All</span>
+                </label>
+                <div class="relative">
+                    <span class="absolute left-3 top-3 text-[#2196f3] font-bold">$</span>
+                    <input id="withAmount" type="number" min="10" step="any" required class="input-field rounded w-full p-3 pl-8 font-bold placeholder-gray-600" placeholder="Minimum $10">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Your USDT (TRC20) Address</label>
+                <input id="withAddress" type="text" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="TV... or T...">
+            </div>
+
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Security PIN</label>
+                <input id="withPin" type="password" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="Enter your 4 digit PIN">
+                <div class="text-[10px] text-gray-500 mt-1">This is the PIN you set when creating your account.</div>
+            </div>
+
+            <button type="submit" class="w-full bg-[#2196f3] text-white py-3 rounded font-bold mt-2 shadow-lg active:scale-95 transition hover:bg-blue-500">
+                REQUEST WITHDRAWAL
+            </button>
+        </form>
+    </main>
+
+    <script>
+        const userId = localStorage.getItem('auth_token');
+        if (!userId) window.location.href = 'login.html';
+
+        let maxBalance = 0;
+
+        // Fetch balance
+        fetch('/api/user', {
+            headers: { 'Authorization': userId }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                maxBalance = parseFloat(data.balance || 0);
+                document.getElementById('current-balance').innerText = '$ ' + maxBalance.toFixed(2);
+            }
+        });
+
+        function withdrawAll() {
+            document.getElementById('withAmount').value = maxBalance.toFixed(2);
+        }
+
+        document.getElementById('withdrawForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const amount = document.getElementById('withAmount').value;
+            const withdrawalAddress = document.getElementById('withAddress').value.trim();
+            const pin = document.getElementById('withPin').value;
+            
+            try {
+                const res = await fetch('/api/withdraw', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': userId
+                    },
+                    body: JSON.stringify({ amount, withdrawalAddress, pin })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Withdrawal request submitted successfully! Your balance has been updated.');
+                    window.location.href = 'mine.html';
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('Server error. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>

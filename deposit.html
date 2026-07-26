@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>888.lk - Deposit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0b1526; color: #ffffff; font-family: 'Roboto', sans-serif; }
+        .header-bg { background-color: #0e1a30; border-bottom: 1px solid #1a2942; }
+        .card { background-color: #121e36; border-radius: 8px; border: 1px solid #1a2942; }
+        .input-field { background-color: #0e1a30; border: 1px solid #1a2942; color: white; transition: all 0.2s; }
+        .input-field:focus { border-color: #2196f3; outline: none; }
+    </style>
+</head>
+<body class="max-w-md mx-auto min-h-screen relative select-none">
+    
+    <header class="flex justify-between items-center px-4 py-4 header-bg sticky top-0 z-40">
+        <a href="mine.html" class="text-gray-400 hover:text-white">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+        </a>
+        <div class="text-xl font-bold">Deposit USDT</div>
+        <div class="w-6"></div>
+    </header>
+
+    <main class="p-4 pb-20">
+        <div class="card p-5 mb-4 text-center relative overflow-hidden">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-[#f3ba2f] rounded-full opacity-10 blur-xl"></div>
+            
+            <div class="text-[#f3ba2f] font-bold text-lg mb-1 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+                Binance Pay (TRC20)
+            </div>
+            <div class="text-gray-400 text-sm mb-4">Send exactly the deposit amount to this address</div>
+            
+            <div class="bg-white p-2 rounded-lg inline-block mb-4 shadow-[0_0_15px_rgba(243,186,47,0.2)]">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=TEizoArWg8Hco2akZ2VbQUHUUk3U4mCYFw" alt="QR Code" class="w-32 h-32">
+            </div>
+            
+            <div class="bg-[#0e1a30] rounded p-3 text-left border border-[#1a2942]">
+                <div class="text-xs text-gray-500 mb-1">Network</div>
+                <div class="font-bold text-white mb-3">TRON (TRC20)</div>
+                
+                <div class="text-xs text-gray-500 mb-1">Deposit Address</div>
+                <div class="flex items-center justify-between">
+                    <div class="font-mono text-sm text-[#f3ba2f] truncate mr-2" id="deposit-address">TEizoArWg8Hco2akZ2VbQUHUUk3U4mCYFw</div>
+                    <button onclick="copyAddress()" class="p-2 bg-[#1a2942] rounded hover:bg-[#233554] active:scale-95 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <form id="depositForm" class="card p-5 space-y-4">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Deposit Amount (USDT)</label>
+                <div class="relative">
+                    <span class="absolute left-3 top-3 text-[#f3ba2f] font-bold">$</span>
+                    <input id="depAmount" type="number" min="10" step="any" required class="input-field rounded w-full p-3 pl-8 font-bold placeholder-gray-600" placeholder="Minimum $10">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Transaction Hash (TxID)</label>
+                <input id="depRef" type="text" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="Paste TxID here">
+            </div>
+            <button type="submit" class="w-full bg-[#f3ba2f] text-[#0b1526] py-3 rounded font-bold mt-2 shadow-lg active:scale-95 transition hover:bg-yellow-400">
+                SUBMIT DEPOSIT
+            </button>
+        </form>
+    </main>
+
+    <script>
+        const userId = localStorage.getItem('auth_token');
+        if (!userId) window.location.href = 'login.html';
+
+        function copyAddress() {
+            navigator.clipboard.writeText('TEizoArWg8Hco2akZ2VbQUHUUk3U4mCYFw').then(() => {
+                alert('Address copied!');
+            });
+        }
+
+        document.getElementById('depositForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const amount = document.getElementById('depAmount').value;
+            const referenceNumber = document.getElementById('depRef').value.trim();
+            
+            try {
+                const res = await fetch('/api/deposit', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': userId
+                    },
+                    body: JSON.stringify({ amount, referenceNumber })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert('Deposit request submitted! Please wait for Admin approval.');
+                    window.location.href = 'mine.html';
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('Server error. Please try again.');
+            }
+        });
+    </script>
+</body>
+</html>
