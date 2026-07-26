@@ -33,6 +33,7 @@ Game.find().sort({ createdAt: -1 }).limit(20).then(games => {
 });
 
 let GAME_LOOP_SECONDS = 30;
+let REFERRAL_BONUS = 500;
 let timeLeft = GAME_LOOP_SECONDS;
 let isBettingFrozen = false;
 let currentPeriod = Date.now();
@@ -52,14 +53,28 @@ const OUTCOMES = {
 
 // Authentication Routes
 app.post('/api/register', async (req, res) => {
-    const { mobile, password, pin } = req.body;
+    const { mobile, password, pin, referralCode } = req.body;
     if (!mobile || !password || !pin) return res.json({ success: false, message: 'All fields are required.' });
     
     try {
         let existing = await User.findOne({ mobile });
         if (existing) return res.json({ success: false, message: 'User already exists.' });
         
-        let newUser = new User({ mobile, password, pin, balance: 50000, history: [] });
+        let newReferralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        let referredBy = null;
+        
+        if (referralCode) {
+            let referrer = await User.findOne({ referralCode });
+            if (referrer) {
+                referredBy = referrer._id.toString();
+                referrer.balance += REFERRAL_BONUS;
+                referrer.referralCount += 1;
+                referrer.referralEarnings += REFERRAL_BONUS;
+                await referrer.save();
+            }
+        }
+        
+        let newUser = new User({ mobile, password, pin, balance: 50000, history: [], referralCode: newReferralCode, referredBy });
         await newUser.save();
         res.json({ success: true, token: newUser._id, message: 'Registration successful!' });
     } catch (err) {
@@ -85,7 +100,7 @@ app.get('/api/user', async (req, res) => {
     try {
         const user = await User.findById(userId);
         if (user) {
-            res.json({ success: true, mobile: user.mobile, balance: user.balance, profilePic: user.profilePic || '' });
+            res.json({ success: true, mobile: user.mobile, balance: user.balance, profilePic: user.profilePic || '', referralCode: user.referralCode, referralCount: user.referralCount, referralEarnings: user.referralEarnings });
         } else {
             res.json({ success: false });
         }

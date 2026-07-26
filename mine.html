@@ -72,6 +72,38 @@
             </div>
         </div>
 
+        <!-- Referral Center Card -->
+        <div class="card p-5 relative overflow-hidden group">
+            <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-purple-500 rounded-full opacity-10 blur-xl group-hover:scale-110 transition-transform"></div>
+            <div class="text-gray-400 text-sm mb-3 font-bold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-purple-400"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Referral Center
+            </div>
+            
+            <div class="flex items-center justify-between bg-[#0e1a30] p-3 rounded border border-[#1a2942] mb-4">
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">Your Code</div>
+                    <div class="text-xl font-bold tracking-widest text-white" id="ref-code">------</div>
+                </div>
+                <button onclick="copyReferral()" class="bg-[#1a2942] hover:bg-[#233554] px-4 py-2 rounded text-sm text-blue-400 font-bold border border-[#2a3f63] active:scale-95 transition">
+                    Copy Link
+                </button>
+            </div>
+            
+            <div class="flex gap-4">
+                <div class="flex-1 bg-[#0e1a30] p-3 rounded border border-[#1a2942]">
+                    <div class="text-xs text-gray-500">Friends Invited</div>
+                    <div class="text-lg font-bold text-white mt-1" id="ref-count">0</div>
+                </div>
+                <div class="flex-1 bg-[#0e1a30] p-3 rounded border border-[#1a2942]">
+                    <div class="text-xs text-gray-500">Total Bonus</div>
+                    <div class="text-lg font-bold text-green-400 mt-1 flex items-center gap-1">
+                        🪙 <span id="ref-earnings">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Menu List -->
         <div class="card overflow-hidden">
             <div class="menu-item p-4 border-b border-[#1a2942] flex items-center justify-between cursor-pointer" onclick="window.location.href='win.html'">
@@ -159,6 +191,12 @@
                     document.getElementById('avatar-img').src = data.profilePic;
                     document.getElementById('avatar-img').classList.remove('hidden');
                 }
+                
+                document.getElementById('ref-code').innerText = data.referralCode || '------';
+                document.getElementById('ref-count').innerText = data.referralCount || 0;
+                document.getElementById('ref-earnings').innerText = data.referralEarnings || 0;
+                // Store code globally for the copy function
+                window.myReferralCode = data.referralCode;
             } else {
                 // Invalid token or user not found (database wiped)
                 localStorage.removeItem('auth_token');
@@ -227,6 +265,16 @@
                 localStorage.removeItem('auth_token');
                 window.location.href = 'login.html';
             }
+        }
+        
+        function copyReferral() {
+            if (!window.myReferralCode) return;
+            const link = window.location.origin + '/register.html?ref=' + window.myReferralCode;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('Referral link copied! Share it with friends to earn bonus coins.');
+            }).catch(() => {
+                alert('Failed to copy. Your code is: ' + window.myReferralCode);
+            });
         }
     </script>
 </body>

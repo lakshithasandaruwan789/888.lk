@@ -17,7 +17,11 @@ const userSchema = new mongoose.Schema({
     pin: { type: String, required: true },
     balance: { type: Number, default: 50000 },
     history: [betHistorySchema],
-    profilePic: { type: String, default: '' }
+    profilePic: { type: String, default: '' },
+    referralCode: { type: String, unique: true },
+    referredBy: { type: String, default: null },
+    referralCount: { type: Number, default: 0 },
+    referralEarnings: { type: Number, default: 0 }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
