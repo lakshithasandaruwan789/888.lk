@@ -100,6 +100,10 @@ app.get('/api/user', async (req, res) => {
     try {
         const user = await User.findById(userId);
         if (user) {
+            if (!user.referralCode) {
+                user.referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+                await user.save();
+            }
             res.json({ success: true, mobile: user.mobile, balance: user.balance, profilePic: user.profilePic || '', referralCode: user.referralCode, referralCount: user.referralCount, referralEarnings: user.referralEarnings });
         } else {
             res.json({ success: false });
