@@ -242,6 +242,7 @@ io.on('connection', async (socket) => {
       try {
           const user = await User.findById(userId);
           if (user) {
+              socket.emit('user_info', { mobile: user.mobile, balance: user.balance });
               socket.emit('my_history_update', user.history);
               socket.emit('update_balance', user.balance);
           }
