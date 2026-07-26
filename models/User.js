@@ -16,7 +16,8 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     pin: { type: String, required: true },
     balance: { type: Number, default: 50000 },
-    history: [betHistorySchema]
+    history: [betHistorySchema],
+    profilePic: { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
