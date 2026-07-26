@@ -44,9 +44,13 @@
             </div>
             <input type="file" id="avatar-input" accept="image/*" class="hidden" onchange="uploadAvatar(this)">
             <div>
-                <div class="text-gray-300 text-sm mb-1">Mobile Number</div>
-                <div class="text-2xl font-bold tracking-wider" id="profile-mobile">Loading...</div>
-                <div class="text-xs text-blue-300 mt-1 flex items-center gap-1">
+                <div class="text-2xl font-bold tracking-wider text-white" id="profile-name">User</div>
+                <div class="text-gray-300 text-sm mt-1 flex items-center gap-2">
+                    <span id="profile-country">Sri Lanka 🇱🇰</span>
+                    <span class="text-gray-500">•</span>
+                    <span id="profile-mobile">Loading...</span>
+                </div>
+                <div class="text-xs text-blue-300 mt-2 flex items-center gap-1">
                     <span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span> Active
                 </div>
             </div>
@@ -185,6 +189,9 @@
                 }
                 document.getElementById('profile-mobile').innerText = masked;
                 document.getElementById('profile-balance').innerText = parseFloat(data.balance || 0).toFixed(2);
+                
+                document.getElementById('profile-name').innerText = data.name || 'User';
+                document.getElementById('profile-country').innerText = data.country || 'Sri Lanka 🇱🇰';
                 
                 if (data.profilePic) {
                     document.getElementById('avatar-placeholder').classList.add('hidden');

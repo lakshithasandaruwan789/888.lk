@@ -54,8 +54,8 @@ const OUTCOMES = {
 
 // Authentication Routes
 app.post('/api/register', async (req, res) => {
-    const { mobile, password, pin, referralCode } = req.body;
-    if (!mobile || !password || !pin) return res.json({ success: false, message: 'All fields are required.' });
+    const { mobile, password, pin, referralCode, name, country, age, sex } = req.body;
+    if (!mobile || !password || !pin || !name || !country || !age || !sex) return res.json({ success: false, message: 'All fields are required.' });
     
     try {
         let existing = await User.findOne({ mobile });
@@ -75,7 +75,7 @@ app.post('/api/register', async (req, res) => {
             }
         }
         
-        let newUser = new User({ mobile, password, pin, balance: 50000, history: [], referralCode: newReferralCode, referredBy });
+        let newUser = new User({ mobile, password, pin, name, country, age, sex, balance: 50000, history: [], referralCode: newReferralCode, referredBy });
         await newUser.save();
         res.json({ success: true, token: newUser._id, message: 'Registration successful!' });
     } catch (err) {
@@ -105,7 +105,7 @@ app.get('/api/user', async (req, res) => {
                 user.referralCode = Math.random().toString(36).substring(2, 8).toUpperCase();
                 await user.save();
             }
-            res.json({ success: true, mobile: user.mobile, balance: user.balance, profilePic: user.profilePic || '', referralCode: user.referralCode, referralCount: user.referralCount, referralEarnings: user.referralEarnings });
+            res.json({ success: true, mobile: user.mobile, balance: user.balance, profilePic: user.profilePic || '', referralCode: user.referralCode, referralCount: user.referralCount, referralEarnings: user.referralEarnings, name: user.name, country: user.country, age: user.age, sex: user.sex });
         } else {
             res.json({ success: false });
         }

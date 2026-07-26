@@ -33,6 +33,44 @@
             
             <form id="registerForm" class="space-y-4">
                 <div>
+                    <label class="block text-sm text-gray-400 mb-1">Full Name</label>
+                    <input id="regName" type="text" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="John Doe">
+                </div>
+
+                <div class="flex gap-3">
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-400 mb-1">Age</label>
+                        <input id="regAge" type="number" min="18" max="100" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="18">
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-400 mb-1">Sex</label>
+                        <select id="regSex" required class="input-field rounded w-full p-3 font-bold">
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Country</label>
+                    <select id="regCountry" required class="input-field rounded w-full p-3 font-bold">
+                        <option value="Sri Lanka 🇱🇰">Sri Lanka 🇱🇰</option>
+                        <option value="India 🇮🇳">India 🇮🇳</option>
+                        <option value="Pakistan 🇵🇰">Pakistan 🇵🇰</option>
+                        <option value="Bangladesh 🇧🇩">Bangladesh 🇧🇩</option>
+                        <option value="Nepal 🇳🇵">Nepal 🇳🇵</option>
+                        <option value="Maldives 🇲🇻">Maldives 🇲🇻</option>
+                        <option value="Malaysia 🇲🇾">Malaysia 🇲🇾</option>
+                        <option value="Singapore 🇸🇬">Singapore 🇸🇬</option>
+                        <option value="Thailand 🇹🇭">Thailand 🇹🇭</option>
+                        <option value="Indonesia 🇮🇩">Indonesia 🇮🇩</option>
+                        <option value="Philippines 🇵🇭">Philippines 🇵🇭</option>
+                        <option value="Vietnam 🇻🇳">Vietnam 🇻🇳</option>
+                    </select>
+                </div>
+
+                <div>
                     <label class="block text-sm text-gray-400 mb-1">Mobile Number</label>
                     <div class="flex">
                         <span class="input-field rounded-l flex items-center px-3 border-r-0 text-gray-400 font-bold">+94</span>
@@ -48,6 +86,11 @@
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">Withdrawal PIN</label>
                     <input id="regPin" type="password" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="4 Digit PIN">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Referral Code (Optional)</label>
+                    <input id="regRef" type="text" class="input-field rounded w-full p-3 font-bold placeholder-gray-600 uppercase" placeholder="Enter Code">
                 </div>
 
                 <button type="submit" class="w-full bg-[#2196f3] text-white py-3 rounded font-bold mt-4 shadow-lg active:scale-95 transition">REGISTER</button>
@@ -85,17 +128,28 @@
         if (localStorage.getItem('auth_token')) {
             window.location.href = 'index.html';
         }
+        // Auto-fill referral code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('ref')) {
+            document.getElementById('regRef').value = urlParams.get('ref');
+        }
+
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const mobile = document.getElementById('regMobile').value;
             const password = document.getElementById('regPassword').value;
             const pin = document.getElementById('regPin').value;
+            const referralCode = document.getElementById('regRef').value.trim();
+            const name = document.getElementById('regName').value.trim();
+            const country = document.getElementById('regCountry').value;
+            const age = document.getElementById('regAge').value;
+            const sex = document.getElementById('regSex').value;
             
             try {
                 const res = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mobile, password, pin })
+                    body: JSON.stringify({ mobile, password, pin, referralCode, name, country, age, sex })
                 });
                 const data = await res.json();
                 if(data.success) {
