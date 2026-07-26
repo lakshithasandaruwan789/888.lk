@@ -34,11 +34,12 @@
             888<span class="text-yellow-400 text-lg font-bold normal-case">.lk</span>
         </div>
         <div class="flex items-center gap-3">
-            <a href="#" class="bg-[#1a2942] p-2 rounded-full text-blue-300 shadow-md">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <a href="https://t.me/your_telegram_group" target="_blank" class="bg-[#1a2942] p-2 rounded-full text-blue-400 shadow-md hover:bg-[#233554] transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.18-.08-.05-.19-.02-.27 0-.11.03-1.84 1.18-5.22 3.47-.49.34-.94.5-1.35.49-.45-.01-1.31-.25-1.95-.46-.79-.26-1.41-.39-1.36-.83.03-.23.34-.47.93-.72 3.65-1.59 6.09-2.64 7.33-3.15 3.48-1.44 4.2-1.69 4.68-1.7.11 0 .34.03.48.14.12.1.15.24.16.35-.01.03-.01.12-.02.26z"/></svg>
             </a>
-            <a href="#" class="bg-[#1a2942] p-2 rounded-full text-green-400 shadow-md">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+            <a href="mine.html" class="bg-[#1a2942] w-9 h-9 rounded-full shadow-md flex items-center justify-center overflow-hidden border border-[#2a3f63]">
+                <img id="header-avatar-img" src="" alt="Profile" class="w-full h-full object-cover hidden">
+                <svg id="header-avatar-placeholder" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-gray-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
             </a>
         </div>
     </header>
@@ -160,5 +161,24 @@
             MINE
         </a>
     </nav>
+
+    <script>
+        const userId = localStorage.getItem('auth_token');
+        if (userId) {
+            fetch('/api/user', {
+                headers: { 'Authorization': userId }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.profilePic) {
+                    document.getElementById('header-avatar-placeholder').classList.add('hidden');
+                    const img = document.getElementById('header-avatar-img');
+                    img.src = data.profilePic;
+                    img.classList.remove('hidden');
+                }
+            })
+            .catch(err => console.error(err));
+        }
+    </script>
 </body>
 </html>
