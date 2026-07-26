@@ -79,6 +79,21 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+app.get('/api/user', async (req, res) => {
+    const userId = req.headers.authorization;
+    if (!userId) return res.json({ success: false });
+    try {
+        const user = await User.findById(userId);
+        if (user) {
+            res.json({ success: true, mobile: user.mobile, balance: user.balance });
+        } else {
+            res.json({ success: false });
+        }
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
 function calculateWinningResult() {
   if (forcedResult !== null) {
     const res = forcedResult;

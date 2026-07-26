@@ -138,8 +138,13 @@
         // Setup Socket
         const socket = io({ query: { userId } });
 
-        socket.on('user_info', (data) => {
-            try {
+        // Fetch User Info API
+        fetch('/api/user', {
+            headers: { 'Authorization': userId }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
                 const m = data.mobile ? data.mobile.toString() : 'Unknown';
                 let masked = m;
                 if (m.length >= 10) {
@@ -147,10 +152,13 @@
                 }
                 document.getElementById('profile-mobile').innerText = masked;
                 document.getElementById('profile-balance').innerText = parseFloat(data.balance || 0).toFixed(2);
-            } catch(e) {
-                console.error(e);
+            } else {
+                // Invalid token or user not found (database wiped)
+                localStorage.removeItem('auth_token');
+                window.location.href = 'login.html';
             }
-        });
+        })
+        .catch(err => console.error(err));
 
         socket.on('update_balance', (balance) => {
             document.getElementById('profile-balance').innerText = parseFloat(balance || 0).toFixed(2);
