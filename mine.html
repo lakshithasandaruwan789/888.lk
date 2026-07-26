@@ -139,18 +139,21 @@
         const socket = io({ query: { userId } });
 
         socket.on('user_info', (data) => {
-            // Mask mobile number for privacy (e.g., 071***1234)
-            const m = data.mobile;
-            let masked = m;
-            if (m.length >= 10) {
-                masked = m.substring(0,3) + '****' + m.substring(m.length - 3);
+            try {
+                const m = data.mobile ? data.mobile.toString() : 'Unknown';
+                let masked = m;
+                if (m.length >= 10) {
+                    masked = m.substring(0,3) + '****' + m.substring(m.length - 3);
+                }
+                document.getElementById('profile-mobile').innerText = masked;
+                document.getElementById('profile-balance').innerText = parseFloat(data.balance || 0).toFixed(2);
+            } catch(e) {
+                console.error(e);
             }
-            document.getElementById('profile-mobile').innerText = masked;
-            document.getElementById('profile-balance').innerText = parseFloat(data.balance).toFixed(2);
         });
 
         socket.on('update_balance', (balance) => {
-            document.getElementById('profile-balance').innerText = parseFloat(balance).toFixed(2);
+            document.getElementById('profile-balance').innerText = parseFloat(balance || 0).toFixed(2);
         });
 
         function logout() {
