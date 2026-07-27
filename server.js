@@ -32,16 +32,22 @@ let forcedResult = null;
 let scheduledTimes = []; // Array of { id, timestamp, result: {number, colorLabel, colorKey} }
 let gameHistoryCache = [];
 
-function getNextPeriodId(lastPeriod = null) {
+function getNextPeriodId() {
     const d = new Date();
+    // Use Sri Lanka Time (GMT+5:30)
+    const slTime = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Colombo' }));
+    
     const pad = (n) => n.toString().padStart(2, '0');
-    const todayStr = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+    const todayStr = `${slTime.getFullYear()}${pad(slTime.getMonth()+1)}${pad(slTime.getDate())}`;
 
-    if (lastPeriod && String(lastPeriod).startsWith(todayStr)) {
-        const seq = parseInt(String(lastPeriod).slice(-4)) + 1;
-        return todayStr + seq.toString().padStart(4, '0');
-    }
-    return todayStr + '0001';
+    const hours = slTime.getHours();
+    const minutes = slTime.getMinutes();
+    const seconds = slTime.getSeconds();
+
+    const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+    const seq = Math.floor(totalSeconds / GAME_LOOP_SECONDS) + 1;
+
+    return todayStr + seq.toString().padStart(4, '0');
 }
 
 let currentPeriod = getNextPeriodId();
@@ -50,7 +56,7 @@ let currentPeriod = getNextPeriodId();
 Game.find().sort({ createdAt: -1 }).limit(20).then(games => {
     gameHistoryCache = games.map(g => ({ period: String(g.period), result: g.result }));
     if (games.length > 0) {
-        currentPeriod = getNextPeriodId(games[0].period);
+        currentPeriod = getNextPeriodId();
     }
 });
 
@@ -650,7 +656,7 @@ setInterval(async () => {
 
     setTimeout(() => {
       currentBets = [];
-      currentPeriod = getNextPeriodId(currentPeriod);
+      currentPeriod = getNextPeriodId();
       timeLeft = GAME_LOOP_SECONDS;
       isBettingFrozen = false;
       broadcastAdminUpdate();
