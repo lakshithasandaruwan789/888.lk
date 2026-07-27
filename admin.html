@@ -12,9 +12,27 @@
         body { background-color: #0b1526; color: #ffffff; font-family: 'Roboto', sans-serif; }
         .sidebar { background-color: #0e1a30; border-right: 1px solid #1a2942; }
         .main-content { min-height: 100vh; padding: 1rem; }
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 260px;
+            height: 100vh;
+            background-color: #0f1c33;
+            z-index: 50;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar.open { transform: translateX(0); }
+        .mobile-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 40;
+        }
+        .mobile-overlay.open { display: block; }
+        
+        .main-content { padding: 1rem; width: 100%; }
         @media (min-width: 768px) {
-            .sidebar { height: 100vh; position: fixed; width: 250px; }
-            .main-content { margin-left: 250px; padding: 2rem; }
+            .sidebar { transform: translateX(0); }
+            .mobile-overlay.open { display: none; }
+            .main-content { margin-left: 260px; padding: 2rem; width: calc(100% - 260px); }
         }
         .card { background-color: #121e36; border-radius: 8px; border: 1px solid #1a2942; }
         .nav-item { padding: 12px 20px; cursor: pointer; transition: 0.2s; font-weight: 500; border-left: 4px solid transparent; }
@@ -35,10 +53,14 @@
 </head>
 <body class="flex flex-col md:flex-row">
 
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" onclick="toggleSidebar()"></div>
+
     <!-- Sidebar -->
     <div class="sidebar flex flex-col">
-        <div class="p-6 border-b border-[#1a2942]">
+        <div class="p-6 border-b border-[#1a2942] flex justify-between items-center">
             <h1 class="text-2xl font-black text-white italic tracking-tighter">ADMIN<span class="text-yellow-500 font-bold normal-case">.lk</span></h1>
+            <button class="md:hidden text-gray-400 text-xl font-bold" onclick="toggleSidebar()">✕</button>
         </div>
         <div class="flex-grow py-4">
             <div class="nav-item nav-active" onclick="showSection('dashboard', this)">Dashboard</div>
@@ -56,8 +78,15 @@
     </div>
 
     <!-- Main Content -->
-    <div class="main-content flex-grow">
+    <div class="main-content flex-grow w-full">
         
+        <!-- Mobile Header -->
+        <div class="md:hidden flex items-center justify-between bg-[#121e36] p-4 rounded-lg mb-4 shadow border border-[#1a2942]">
+            <h1 class="text-lg font-black text-white italic">ADMIN<span class="text-yellow-500 font-bold normal-case">.lk</span></h1>
+            <button onclick="toggleSidebar()" class="text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+        </div>
         <!-- Dashboard Section -->
         <div id="dashboard" class="section active">
             <h2 class="text-2xl font-bold mb-6 border-b border-[#1a2942] pb-2">Overview</h2>
@@ -70,7 +99,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="card p-6 border-t-4 border-t-blue-500">
                     <div class="text-gray-400 text-sm mb-1">Total Users</div>
                     <div class="text-3xl font-bold" id="stat-users">0</div>
@@ -351,6 +380,11 @@
             if(data.type === 'withdraw' && activeId === 'withdrawals') loadTransactions('withdraw');
         });
 
+        function toggleSidebar() {
+            document.querySelector('.sidebar').classList.toggle('open');
+            document.querySelector('.mobile-overlay').classList.toggle('open');
+        }
+
         let liveBetInterval = null;
 
         function showSection(id, element) {
@@ -359,6 +393,11 @@
             
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
             element.classList.add('nav-active');
+            
+            if (window.innerWidth < 768) {
+                document.querySelector('.sidebar').classList.remove('open');
+                document.querySelector('.mobile-overlay').classList.remove('open');
+            }
             
             clearInterval(liveBetInterval); 
             
