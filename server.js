@@ -227,6 +227,46 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
     }
 });
 
+// Admin Chart Stats
+app.get('/api/admin/stats/chart', adminAuth, async (req, res) => {
+    try {
+        const today = new Date();
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(today.getDate() - 6);
+        sevenDaysAgo.setHours(0, 0, 0, 0);
+
+        const txns = await Transaction.find({
+            status: 'approved',
+            updatedAt: { $gte: sevenDaysAgo }
+        });
+
+        const dailyData = {};
+        for(let i=6; i>=0; i--) {
+            let d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            dailyData[dateStr] = { deposits: 0, withdrawals: 0 };
+        }
+
+        txns.forEach(tx => {
+            const dateStr = tx.updatedAt.toISOString().split('T')[0];
+            if(dailyData[dateStr]) {
+                if(tx.type === 'deposit') dailyData[dateStr].deposits += tx.amount;
+                if(tx.type === 'withdraw') dailyData[dateStr].withdrawals += tx.amount;
+            }
+        });
+
+        const labels = Object.keys(dailyData);
+        const deposits = labels.map(l => dailyData[l].deposits);
+        const withdrawals = labels.map(l => dailyData[l].withdrawals);
+        const profit = labels.map(l => dailyData[l].deposits - dailyData[l].withdrawals);
+
+        res.json({ success: true, labels, deposits, withdrawals, profit });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
 // Settings Endpoints
 app.get('/api/settings', async (req, res) => {
     try {
