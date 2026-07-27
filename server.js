@@ -178,25 +178,13 @@ app.post('/api/deposit', async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
 
-        let receiptUrl = '';
-        if (receiptImage) {
-            const base64Data = receiptImage.replace(/^data:image\/\w+;base64,/, '');
-            const ext = receiptImage.split(';')[0].split('/')[1] || 'jpg';
-            const filename = `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
-            const uploadsDir = path.join(__dirname, 'uploads', 'receipts');
-            if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-            
-            fs.writeFileSync(path.join(uploadsDir, filename), base64Data, 'base64');
-            receiptUrl = `/uploads/receipts/${filename}`;
-        }
-
         const newTx = new Transaction({
             userId,
             type: 'deposit',
             amount: parseFloat(amount),
             status: 'pending',
             referenceNumber,
-            receiptImage: receiptUrl
+            receiptImage: receiptImage || ''
         });
         await newTx.save();
         io.emit('admin_alert', { type: 'deposit', amount: parseFloat(amount), mobile: user.mobile });
