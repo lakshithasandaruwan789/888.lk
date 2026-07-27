@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>888.lk - Aviator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { background-color: #0b1526; color: #ffffff; font-family: 'Roboto', sans-serif; padding-bottom: 70px; }
+        .header-bg { background-color: #0e1a30; border-bottom: 1px solid #1a2942; }
+        .card { background-color: #121e36; border-radius: 8px; border: 1px solid #1a2942; }
+        .nav-active { color: #ffffff; }
+        .nav-inactive { color: #6c757d; }
+        
+        #game-container {
+            width: 100%;
+            height: 250px;
+            background-color: #080f1c;
+            position: relative;
+            border-radius: 8px;
+            border: 1px solid #1a2942;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #multiplier-display {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #ef4444; /* Default Red, turns Red/Green based on crash */
+            position: absolute;
+            z-index: 10;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.8);
+            transition: color 0.3s;
+        }
+
+        #status-text {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            color: #fbbf24;
+            z-index: 10;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .btn-bet { background-color: #22c55e; color: white; transition: all 0.2s; }
+        .btn-bet:active { transform: scale(0.95); }
+        .btn-cashout { background-color: #f59e0b; color: white; transition: all 0.2s; animation: pulse 1s infinite; }
+        .btn-cashout:active { transform: scale(0.95); }
+        .btn-disabled { background-color: #374151; color: #9ca3af; pointer-events: none; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        }
+
+        .player-row { border-bottom: 1px solid #1a2942; }
+        .player-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header-bg p-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-2" onclick="window.location.href='index.html'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+            <h1 class="text-xl font-bold">AVIATOR</h1>
+        </div>
+        <div class="flex items-center gap-2 bg-[#1a2942] px-3 py-1.5 rounded-full border border-[#2a3f63]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <span class="font-bold text-sm" id="header-balance">Loading...</span>
+        </div>
+    </div>
+
+    <div class="p-4">
+        <!-- Game Canvas -->
+        <div id="game-container" class="mb-4 shadow-lg">
+            <div id="status-text">CONNECTING...</div>
+            <div id="multiplier-display">1.00x</div>
+            <!-- Canvas for curve -->
+            <canvas id="aviatorCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:1;"></canvas>
+        </div>
+
+        <!-- Betting Controls -->
+        <div class="card p-4 mb-4">
+            <div class="flex justify-between items-center mb-3">
+                <div class="text-sm text-gray-400">Bet Amount ($)</div>
+                <div class="flex gap-2">
+                    <button class="bg-[#1a2942] text-xs px-2 py-1 rounded" onclick="setBet(10)">$10</button>
+                    <button class="bg-[#1a2942] text-xs px-2 py-1 rounded" onclick="setBet(50)">$50</button>
+                    <button class="bg-[#1a2942] text-xs px-2 py-1 rounded" onclick="setBet(100)">$100</button>
+                </div>
+            </div>
+            <div class="flex gap-3 h-14">
+                <input type="number" id="betAmount" value="10" min="10" class="w-1/3 bg-[#0e1a30] text-center font-bold text-xl rounded border border-[#1a2942] focus:outline-none focus:border-blue-500">
+                <button id="actionBtn" class="flex-1 rounded font-bold text-xl btn-disabled shadow-lg" onclick="handleAction()">WAITING...</button>
+            </div>
+            <div id="bet-msg" class="text-center text-sm text-gray-400 mt-2">Connecting to server...</div>
+        </div>
+
+        <!-- Live Players -->
+        <div class="card p-4">
+            <h3 class="font-bold mb-3 flex items-center gap-2 border-b border-[#1a2942] pb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                Active Players (<span id="player-count">0</span>)
+            </h3>
+            <div id="players-list" class="max-h-60 overflow-y-auto">
+                <!-- Player Rows -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="header-bg fixed bottom-0 w-full flex justify-around py-2 text-[10px] font-bold z-50">
+        <a href="index.html" class="flex flex-col items-center nav-inactive w-1/4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-1"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            HOME
+        </a>
+        <a href="win.html" class="flex flex-col items-center nav-inactive w-1/4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-1"><path d="M2 12h4l3-9 5 18 3-9h5"/></svg>
+            WIN
+        </a>
+        <a href="#" class="flex flex-col items-center nav-active w-1/4 relative">
+            <div class="nav-circle absolute -top-10 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-blue-400"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </div>
+            <span class="mt-6">AVIATOR</span>
+        </a>
+        <a href="mine.html" class="flex flex-col items-center nav-inactive w-1/4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-1"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            MINE
+        </a>
+    </div>
+
+    <script>
+        const userId = localStorage.getItem('userId');
+        if (!userId) {
+            window.location.href = 'login.html';
+        }
+
+        const socket = io({ query: { userId } });
+        
+        let gameState = 'CONNECTING'; // WAITING, FLYING, CRASHED
+        let gameStartTime = null;
+        let currentMult = 1.00;
+        let animationFrame = null;
+        let myBetPlaced = false;
+        let myBetAmount = 0;
+        let cashedOut = false;
+        let crashedMult = null;
+        let activePlayers = [];
+
+        // UI Elements
+        const multDisplay = document.getElementById('multiplier-display');
+        const statusText = document.getElementById('status-text');
+        const actionBtn = document.getElementById('actionBtn');
+        const betInput = document.getElementById('betAmount');
+        const betMsg = document.getElementById('bet-msg');
+        const canvas = document.getElementById('aviatorCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function setBet(amt) { betInput.value = amt; }
+
+        socket.on('user_info', (data) => {
+            document.getElementById('header-balance').innerText = '$ ' + data.balance.toFixed(2);
+        });
+        socket.on('update_balance', (balance) => {
+            document.getElementById('header-balance').innerText = '$ ' + balance.toFixed(2);
+        });
+
+        socket.on('aviator_init', (data) => {
+            gameState = data.state;
+            gameStartTime = data.startTime;
+            activePlayers = data.players || [];
+            renderPlayers();
+            
+            // Check if I already bet
+            const myBet = activePlayers.find(p => p.userId === userId);
+            if(myBet) {
+                myBetPlaced = true;
+                myBetAmount = myBet.amount;
+                // Since this is just init, we might have already cashed out or still flying
+                // We'll reset cashedOut to false if waiting, else keep track properly later
+            }
+
+            updateUIForState();
+        });
+
+        socket.on('aviator_waiting', (data) => {
+            gameState = 'WAITING';
+            myBetPlaced = false;
+            cashedOut = false;
+            myBetAmount = 0;
+            currentMult = 1.00;
+            multDisplay.innerText = "1.00x";
+            multDisplay.style.color = '#10b981'; // Green
+            activePlayers = [];
+            renderPlayers();
+            
+            let waitT = data.waitTime;
+            statusText.innerText = `NEXT ROUND IN ${waitT.toFixed(1)}s`;
+            
+            let interval = setInterval(() => {
+                if (gameState !== 'WAITING') { clearInterval(interval); return; }
+                waitT -= 0.1;
+                if(waitT > 0) statusText.innerText = `NEXT ROUND IN ${waitT.toFixed(1)}s`;
+            }, 100);
+
+            updateUIForState();
+            clearCanvas();
+        });
+
+        socket.on('aviator_start', (data) => {
+            gameState = 'FLYING';
+            gameStartTime = data.startTime;
+            statusText.innerText = "FLYING...";
+            multDisplay.style.color = '#ef4444'; // Red
+            
+            if (!myBetPlaced) cashedOut = true; // prevent late cashouts
+            
+            updateUIForState();
+            startAnimation();
+        });
+
+        socket.on('aviator_crashed', (data) => {
+            gameState = 'CRASHED';
+            crashedMult = data.multiplier;
+            cancelAnimationFrame(animationFrame);
+            
+            multDisplay.innerText = `${crashedMult.toFixed(2)}x`;
+            multDisplay.style.color = '#6b7280'; // Gray out
+            statusText.innerText = "CRASHED";
+            
+            if (myBetPlaced && !cashedOut) {
+                betMsg.innerText = "You crashed! Bet lost.";
+                betMsg.style.color = '#ef4444';
+            }
+            
+            updateUIForState();
+        });
+
+        socket.on('aviator_players', (players) => {
+            activePlayers = players;
+            renderPlayers();
+        });
+
+        function updateUIForState() {
+            if (gameState === 'WAITING') {
+                if (myBetPlaced) {
+                    actionBtn.innerText = "BET PLACED";
+                    actionBtn.className = "flex-1 rounded font-bold text-xl btn-disabled shadow-lg";
+                    betMsg.innerText = "Waiting for game to start...";
+                    betMsg.style.color = "#fbbf24";
+                } else {
+                    actionBtn.innerText = "PLACE BET";
+                    actionBtn.className = "flex-1 rounded font-bold text-xl btn-bet shadow-lg";
+                    betMsg.innerText = "Place your bet before it starts!";
+                    betMsg.style.color = "#9ca3af";
+                }
+            } else if (gameState === 'FLYING') {
+                if (myBetPlaced && !cashedOut) {
+                    actionBtn.innerText = "CASH OUT";
+                    actionBtn.className = "flex-1 rounded font-bold text-xl btn-cashout shadow-lg";
+                    betMsg.innerText = "Cash out before it crashes!";
+                    betMsg.style.color = "#10b981";
+                } else {
+                    actionBtn.innerText = "FLYING...";
+                    actionBtn.className = "flex-1 rounded font-bold text-xl btn-disabled shadow-lg";
+                    if(cashedOut && myBetPlaced) {
+                        // Already won
+                    } else {
+                        betMsg.innerText = "Wait for next round.";
+                        betMsg.style.color = "#9ca3af";
+                    }
+                }
+            } else if (gameState === 'CRASHED') {
+                actionBtn.innerText = "CRASHED";
+                actionBtn.className = "flex-1 rounded font-bold text-xl btn-disabled shadow-lg";
+            }
+        }
+
+        function handleAction() {
+            if (gameState === 'WAITING' && !myBetPlaced) {
+                const amt = parseFloat(betInput.value);
+                if (isNaN(amt) || amt < 10) return alert('Minimum bet is $10');
+                
+                actionBtn.innerText = "WAIT...";
+                actionBtn.className = "flex-1 rounded font-bold text-xl btn-disabled shadow-lg";
+                
+                socket.emit('aviator_bet', { userId, amount: amt }, (res) => {
+                    if (res.success) {
+                        myBetPlaced = true;
+                        myBetAmount = amt;
+                        updateUIForState();
+                    } else {
+                        alert(res.message);
+                        updateUIForState();
+                    }
+                });
+            } else if (gameState === 'FLYING' && myBetPlaced && !cashedOut) {
+                socket.emit('aviator_cashout', { userId }, (res) => {
+                    if (res.success) {
+                        cashedOut = true;
+                        updateUIForState();
+                        actionBtn.innerText = `WON $${res.winAmount.toFixed(2)}!`;
+                        betMsg.innerText = `You cashed out at ${res.multiplier.toFixed(2)}x`;
+                        betMsg.style.color = "#10b981";
+                    } else {
+                        alert(res.message); // might have crashed just milliseconds before
+                    }
+                });
+            }
+        }
+
+        function startAnimation() {
+            function draw() {
+                if (gameState !== 'FLYING') return;
+                
+                const elapsedMs = Date.now() - gameStartTime;
+                const seconds = elapsedMs / 1000;
+                currentMult = Math.pow(Math.E, 0.06 * seconds);
+                currentMult = Math.max(1.00, currentMult);
+                
+                multDisplay.innerText = `${currentMult.toFixed(2)}x`;
+
+                // Update Cashout Button text live if active
+                if (myBetPlaced && !cashedOut) {
+                    const currentWin = (myBetAmount * currentMult).toFixed(2);
+                    actionBtn.innerText = `CASH OUT ($${currentWin})`;
+                }
+
+                drawCurve(elapsedMs);
+                animationFrame = requestAnimationFrame(draw);
+            }
+            draw();
+        }
+
+        function drawCurve(elapsedMs) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw a red curve from bottom-left to top-right representing the flight
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            
+            // Math for curve
+            const progress = Math.min(1, elapsedMs / 30000); // reaches top right around 30s
+            const endX = canvas.width * progress;
+            const endY = canvas.height - (canvas.height * progress);
+            
+            // Control point
+            const cpX = endX * 0.8;
+            const cpY = canvas.height;
+
+            ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+            
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#ef4444'; // Red line
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#ef4444';
+            ctx.stroke();
+
+            // Draw a dot at the end
+            ctx.beginPath();
+            ctx.arc(endX, endY, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function renderPlayers() {
+            const list = document.getElementById('players-list');
+            document.getElementById('player-count').innerText = activePlayers.length;
+            list.innerHTML = '';
+            
+            if (activePlayers.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-500 py-4">No bets yet.</div>';
+                return;
+            }
+
+            activePlayers.forEach(p => {
+                list.innerHTML += `
+                    <div class="player-row py-2 flex justify-between items-center text-sm">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center font-bold text-xs">
+                                ${p.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span class="text-gray-300">${p.name}</span>
+                        </div>
+                        <div class="font-bold text-green-400">$ ${p.amount.toFixed(2)}</div>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
