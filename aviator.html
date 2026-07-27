@@ -142,7 +142,7 @@
     </div>
 
     <script>
-        const userId = localStorage.getItem('userId');
+        const userId = localStorage.getItem('auth_token');
         if (!userId) {
             window.location.href = 'login.html';
         }
