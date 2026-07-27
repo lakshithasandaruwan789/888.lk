@@ -549,7 +549,7 @@
                             <td class="font-bold text-white">$ ${tx.amount.toFixed(2)}</td>
                             <td class="font-mono text-xs text-yellow-400">${thirdCol}</td>
                             <td>
-                                ${type === 'deposit' && tx.receiptImage ? `<button onclick="viewReceipt('${tx.receiptImage}')" class="btn bg-blue-500 text-white mr-2">👁️ Receipt</button>` : ''}
+                                ${type === 'deposit' ? (tx.receiptImage ? `<button onclick="viewReceipt('${tx.receiptImage}')" class="btn bg-blue-500 text-white mr-2">👁️ Receipt</button>` : `<button disabled class="btn bg-gray-600 text-gray-400 mr-2 cursor-not-allowed">No Receipt</button>`) : ''}
                                 <button onclick="processTx('${tx._id}', 'approve')" class="btn btn-green mr-2">Approve</button>
                                 <button onclick="processTx('${tx._id}', 'reject')" class="btn btn-red">Reject</button>
                             </td>
