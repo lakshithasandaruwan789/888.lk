@@ -47,9 +47,10 @@
     <main class="p-3 space-y-4">
         
         <!-- Promo Banner Slider -->
-        <div class="px-4 mt-6">
+        <!-- Promo Banner Slider -->
+        <div class="px-4 mt-6" id="home-banner-container" style="display: none;">
             <div class="rounded-2xl overflow-hidden relative aspect-[2/1] shadow-xl shadow-blue-900/20">
-                <img id="home-banner" src="https://images.unsplash.com/photo-1620327649557-eb0f576a9117?q=80&w=1000&auto=format&fit=crop" class="w-full h-full object-cover">
+                <img id="home-banner" src="" class="w-full h-full object-cover">
             </div>
         </div>
 
@@ -169,6 +170,19 @@
     </nav>
 
     <script>
+        // Load Dynamic Banner
+        fetch('/api/settings')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.banner) {
+                    document.getElementById('home-banner').src = data.banner;
+                    document.getElementById('home-banner-container').style.display = 'block';
+                } else {
+                    document.getElementById('home-banner-container').style.display = 'none';
+                }
+            })
+            .catch(e => console.log('Banner load error:', e));
+
         const userId = localStorage.getItem('auth_token');
         if (userId) {
             fetch('/api/user', {

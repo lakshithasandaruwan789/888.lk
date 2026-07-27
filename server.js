@@ -231,7 +231,7 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
 app.get('/api/settings', async (req, res) => {
     try {
         let bannerSetting = await Setting.findOne({ key: 'home_banner' });
-        const bannerUrl = bannerSetting ? bannerSetting.value : 'https://images.unsplash.com/photo-1620327649557-eb0f576a9117?q=80&w=1000&auto=format&fit=crop';
+        const bannerUrl = bannerSetting ? bannerSetting.value : ''; // Return empty if none
         res.json({ success: true, banner: bannerUrl });
     } catch (e) {
         res.json({ success: false });
@@ -240,8 +240,8 @@ app.get('/api/settings', async (req, res) => {
 
 app.post('/api/admin/settings/banner', adminAuth, async (req, res) => {
     try {
-        const { banner } = req.body;
-        if (!banner) return res.json({ success: false, message: 'Banner URL required' });
+        let { banner } = req.body;
+        if (banner === undefined) banner = ''; // allow empty
         
         await Setting.findOneAndUpdate(
             { key: 'home_banner' },
