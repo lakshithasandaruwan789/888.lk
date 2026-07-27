@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const User = require('./models/User');
 const Game = require('./models/Game');
 const Transaction = require('./models/Transaction');
+const Setting = require('./models/Setting');
 
 const app = express();
 const server = http.createServer(app);
@@ -221,6 +222,33 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
         const totalBalances = users.reduce((acc, u) => acc + u.balance, 0);
         const pendingTxns = await Transaction.countDocuments({ status: 'pending' });
         res.json({ success: true, totalUsers, totalBalances, pendingTxns, referralBonus: REFERRAL_BONUS });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+// Settings Endpoints
+app.get('/api/settings', async (req, res) => {
+    try {
+        let bannerSetting = await Setting.findOne({ key: 'home_banner' });
+        const bannerUrl = bannerSetting ? bannerSetting.value : 'https://images.unsplash.com/photo-1620327649557-eb0f576a9117?q=80&w=1000&auto=format&fit=crop';
+        res.json({ success: true, banner: bannerUrl });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/settings/banner', adminAuth, async (req, res) => {
+    try {
+        const { banner } = req.body;
+        if (!banner) return res.json({ success: false, message: 'Banner URL required' });
+        
+        await Setting.findOneAndUpdate(
+            { key: 'home_banner' },
+            { value: banner },
+            { upsert: true }
+        );
+        res.json({ success: true });
     } catch (e) {
         res.json({ success: false });
     }
