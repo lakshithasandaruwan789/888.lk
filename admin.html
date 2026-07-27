@@ -99,14 +99,18 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div class="card p-6 border-t-4 border-t-blue-500">
                     <div class="text-gray-400 text-sm mb-1">Total Users</div>
                     <div class="text-3xl font-bold" id="stat-users">0</div>
                 </div>
                 <div class="card p-6 border-t-4 border-t-green-500">
-                    <div class="text-gray-400 text-sm mb-1">Total Balances Held</div>
-                    <div class="text-3xl font-bold text-green-400" id="stat-balances">0.00</div>
+                    <div class="text-gray-400 text-sm mb-1">Total Balance Held</div>
+                    <div class="text-xl font-bold text-green-400" id="stat-balances">0.00</div>
+                </div>
+                <div class="card p-6 border-t-4 border-t-purple-500">
+                    <div class="text-gray-400 text-sm mb-1">Today's Net Profit</div>
+                    <div class="text-2xl font-bold text-purple-400" id="stat-today-profit">0.00</div>
                 </div>
                 <div class="card p-6 border-t-4 border-t-yellow-500">
                     <div class="text-gray-400 text-sm mb-1">Pending Txns</div>
@@ -438,7 +442,10 @@
             const data = await api('/api/admin/stats');
             if (data.success) {
                 document.getElementById('stat-users').innerText = data.totalUsers;
-                document.getElementById('stat-balances').innerText = 'LKR ' + data.totalBalances.toFixed(2);
+                const usdBalance = (data.totalBalances / 100).toFixed(2);
+                document.getElementById('stat-balances').innerHTML = `🪙 ${data.totalBalances.toFixed(2)}<br><span class="text-sm text-green-200">($${usdBalance})</span>`;
+                const usdProfit = (data.todayProfit / 100).toFixed(2);
+                document.getElementById('stat-today-profit').innerHTML = `$${usdProfit}`;
                 document.getElementById('stat-pending').innerText = data.pendingTxns;
                 document.getElementById('refBonusInput').value = data.referralBonus;
             }

@@ -221,7 +221,18 @@ app.get('/api/admin/stats', adminAuth, async (req, res) => {
         const users = await User.find();
         const totalBalances = users.reduce((acc, u) => acc + u.balance, 0);
         const pendingTxns = await Transaction.countDocuments({ status: 'pending' });
-        res.json({ success: true, totalUsers, totalBalances, pendingTxns, referralBonus: REFERRAL_BONUS });
+        
+        // Calculate Today's Profit
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const todaysTxns = await Transaction.find({ status: 'approved', updatedAt: { $gte: today } });
+        let todayProfit = 0;
+        todaysTxns.forEach(tx => {
+            if(tx.type === 'deposit') todayProfit += tx.amount;
+            if(tx.type === 'withdraw') todayProfit -= tx.amount;
+        });
+
+        res.json({ success: true, totalUsers, totalBalances, pendingTxns, todayProfit, referralBonus: REFERRAL_BONUS });
     } catch (e) {
         res.json({ success: false });
     }
