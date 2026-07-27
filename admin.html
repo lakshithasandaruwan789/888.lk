@@ -48,7 +48,7 @@
             <div class="nav-item" onclick="showSection('users', this)">Users List</div>
             <div class="nav-item" onclick="showSection('game', this)">Game Control</div>
             <div class="nav-item" onclick="showSection('game-history', this)">Game History</div>
-            <div class="nav-item" onclick="showSection('banners', this)">Banners & Ads</div>
+            <div class="nav-item" onclick="showSection('settings', this)">Site Settings</div>
         </div>
         <div class="p-4 border-t border-[#1a2942]">
             <button onclick="logout()" class="w-full py-2 bg-[#1a2942] hover:bg-red-500 hover:text-white rounded text-gray-400 font-bold transition">Logout</button>
@@ -83,15 +83,6 @@
                     <div class="text-gray-400 text-sm mb-1">Pending Txns</div>
                     <div class="text-3xl font-bold text-yellow-500" id="stat-pending">0</div>
                 </div>
-            </div>
-            
-            <h2 class="text-xl font-bold mb-4">Quick Settings</h2>
-            <div class="card p-6 flex items-end gap-4 max-w-md">
-                <div class="flex-grow">
-                    <label class="block text-sm text-gray-400 mb-1">Referral Bonus (LKR)</label>
-                    <input type="number" id="refBonusInput" class="input-field w-full" value="500">
-                </div>
-                <button onclick="updateSettings()" class="btn btn-green h-10 px-6">Update</button>
             </div>
         </div>
 
@@ -259,9 +250,22 @@
             </div>
         </div>
 
-        <!-- Banners Section -->
-        <div id="banners" class="section">
-            <h2 class="text-2xl font-bold mb-6 border-b border-[#1a2942] pb-2">Manage Home Banner</h2>
+        <!-- Site Settings Section -->
+        <div id="settings" class="section">
+            <h2 class="text-2xl font-bold mb-6 border-b border-[#1a2942] pb-2">Site Settings</h2>
+            
+            <!-- Quick Settings -->
+            <h3 class="text-xl font-bold mb-4">General Settings</h3>
+            <div class="card p-6 flex items-end gap-4 max-w-md mb-8">
+                <div class="flex-grow">
+                    <label class="block text-sm text-gray-400 mb-1">Referral Bonus (LKR)</label>
+                    <input type="number" id="refBonusInput" class="input-field w-full" value="500">
+                </div>
+                <button onclick="updateSettings()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-bold">Update</button>
+            </div>
+
+            <!-- Banners Section -->
+            <h3 class="text-xl font-bold mb-4">Manage Home Banner</h3>
             <div class="card p-6 max-w-2xl">
                 <label class="block text-gray-400 mb-2">Banner Image URL (Imgur, etc.)</label>
                 <div class="flex gap-2">
@@ -364,7 +368,7 @@
             if(id === 'users') loadUsers();
             if(id === 'tx-history') loadTxHistory();
             if(id === 'game-history') loadGameHistory();
-            if(id === 'banners') loadBanners();
+            if(id === 'settings') loadBanners();
             if(id === 'game') {
                 loadLiveBets();
                 liveBetInterval = setInterval(loadLiveBets, 2000); 
