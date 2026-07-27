@@ -283,6 +283,60 @@ app.post('/api/admin/game', adminAuth, (req, res) => {
     forcedResult = { number: parseInt(number), colorLabel: OUTCOMES[number].label, colorKey: OUTCOMES[number].color };
     res.json({ success: true });
 });
+
+app.get('/api/admin/live-bets', adminAuth, async (req, res) => {
+    try {
+        const betsWithUser = await Promise.all(currentBets.map(async (bet) => {
+            const user = await User.findById(bet.userId);
+            return { ...bet, mobile: user ? user.mobile : 'Unknown' };
+        }));
+        res.json({ success: true, bets: betsWithUser, timeLeft });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.get('/api/admin/users/:id', adminAuth, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) return res.json({ success: false });
+        res.json({ success: true, user });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/users/:id/balance', adminAuth, async (req, res) => {
+    try {
+        const { amount, action } = req.body;
+        const user = await User.findById(req.params.id);
+        if (!user) return res.json({ success: false });
+        
+        const val = parseFloat(amount);
+        if (action === 'add') user.balance += val;
+        else if (action === 'subtract') user.balance -= val;
+        
+        await user.save();
+        res.json({ success: true, newBalance: user.balance });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/users/:id/password', adminAuth, async (req, res) => {
+    try {
+        const { newPassword } = req.body;
+        const user = await User.findById(req.params.id);
+        if (!user) return res.json({ success: false });
+        
+        user.password = newPassword;
+        await user.save();
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
 // ---------------------------
 
 function calculateWinningResult() {

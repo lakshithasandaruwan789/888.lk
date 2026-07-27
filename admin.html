@@ -135,10 +135,11 @@
                             <th>Country</th>
                             <th>Balance ($)</th>
                             <th>Referrals</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody id="users-tbody">
-                        <tr><td colspan="5" class="text-center text-gray-500">Loading...</td></tr>
+                        <tr><td colspan="6" class="text-center text-gray-500">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -147,32 +148,109 @@
         <!-- Game Control Section -->
         <div id="game" class="section">
             <h2 class="text-2xl font-bold mb-6 border-b border-[#1a2942] pb-2">Wingo Game Control (Rigging)</h2>
-            <div class="card p-6 max-w-lg border border-red-500/50">
-                <div class="bg-red-500/10 text-red-500 p-3 rounded mb-4 text-sm">
-                    <strong>Warning:</strong> Forcing a result will guarantee the next round ends on the selected number. This overrides the random logic.
-                </div>
+            <div class="flex flex-col md:flex-row gap-6">
                 
-                <div class="grid grid-cols-5 gap-2 mb-6">
-                    <!-- Generate 0-9 buttons -->
-                    <script>
-                        for(let i=0; i<=9; i++) {
-                            let color = 'bg-blue-500';
-                            if(i===0 || i===5) color = 'bg-purple-500';
-                            else if(i%2!==0) color = 'bg-green-500';
-                            else color = 'bg-red-500';
-                            document.write(`<button onclick="forceResult(${i})" class="w-full py-3 rounded text-white font-bold ${color} hover:opacity-80 active:scale-95">${i}</button>`);
-                        }
-                    </script>
+                <!-- Rigging Panel -->
+                <div class="card p-6 flex-1 border border-red-500/50">
+                    <div class="bg-red-500/10 text-red-500 p-3 rounded mb-4 text-sm">
+                        <strong>Warning:</strong> Forcing a result will guarantee the next round ends on the selected number. This overrides the random logic.
+                    </div>
+                    
+                    <div class="grid grid-cols-5 gap-2 mb-6">
+                        <script>
+                            for(let i=0; i<=9; i++) {
+                                let color = 'bg-blue-500';
+                                if(i===0 || i===5) color = 'bg-purple-500';
+                                else if(i%2!==0) color = 'bg-green-500';
+                                else color = 'bg-red-500';
+                                document.write(`<button onclick="forceResult(${i})" class="w-full py-3 rounded text-white font-bold ${color} hover:opacity-80 active:scale-95">${i}</button>`);
+                            }
+                        </script>
+                    </div>
+                    <div id="force-status" class="text-green-400 font-bold text-center h-6"></div>
                 </div>
-                <div id="force-status" class="text-green-400 font-bold text-center h-6"></div>
+
+                <!-- Live Bets -->
+                <div class="card p-6 flex-1">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg text-yellow-500">Live Bets (Current Round)</h3>
+                        <div class="text-sm text-gray-400">Time Left: <span id="live-timer" class="text-white font-bold font-mono">--</span>s</div>
+                    </div>
+                    <div class="overflow-y-auto max-h-[300px]">
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Bet On</th>
+                                    <th>Amount ($)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="live-bets-tbody">
+                                <tr><td colspan="3" class="text-center text-gray-500">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
 
     </div>
 
+    <!-- User Management Modal -->
+    <div id="userModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-[#121e36] border border-[#1a2942] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 relative">
+            <button onclick="closeUserModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">✕</button>
+            
+            <h2 class="text-2xl font-bold mb-2">Manage User</h2>
+            <div id="modal-user-info" class="text-sm text-gray-400 mb-6 border-b border-[#1a2942] pb-4">
+                Loading...
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- Balance Editor -->
+                <div class="bg-[#0e1a30] p-4 rounded border border-[#1a2942]">
+                    <h3 class="font-bold text-yellow-500 mb-3">Balance Editor</h3>
+                    <input type="number" id="balanceAmt" class="input-field w-full mb-2" placeholder="Amount ($)">
+                    <div class="flex gap-2">
+                        <button onclick="editBalance('add')" class="btn btn-green flex-1">Add (+)</button>
+                        <button onclick="editBalance('subtract')" class="btn btn-red flex-1">Deduct (-)</button>
+                    </div>
+                </div>
+
+                <!-- Password Reset -->
+                <div class="bg-[#0e1a30] p-4 rounded border border-[#1a2942]">
+                    <h3 class="font-bold text-blue-400 mb-3">Password Reset</h3>
+                    <input type="text" id="newPassword" class="input-field w-full mb-2" placeholder="New Password">
+                    <button onclick="resetPassword()" class="btn bg-blue-500 text-white w-full">Set Password</button>
+                </div>
+            </div>
+
+            <!-- History -->
+            <h3 class="font-bold mb-3">Betting History</h3>
+            <div class="overflow-y-auto max-h-[200px] border border-[#1a2942] rounded">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Type</th>
+                            <th>Selection</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modal-history-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         const token = localStorage.getItem('admin_token');
         if (!token) window.location.href = 'admin_login.html';
+
+        let liveBetInterval = null;
 
         function showSection(id, element) {
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -181,10 +259,16 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('nav-active'));
             element.classList.add('nav-active');
             
+            clearInterval(liveBetInterval); // clear previous interval
+            
             if(id === 'dashboard') loadStats();
             if(id === 'deposits') loadTransactions('deposit');
             if(id === 'withdrawals') loadTransactions('withdraw');
             if(id === 'users') loadUsers();
+            if(id === 'game') {
+                loadLiveBets();
+                liveBetInterval = setInterval(loadLiveBets, 2000); // refresh every 2s
+            }
         }
 
         function logout() {
@@ -280,11 +364,81 @@
                             <td>${u.country || 'Sri Lanka'}</td>
                             <td class="text-green-400 font-bold">$ ${u.balance.toFixed(2)}</td>
                             <td>${u.referralCount}</td>
+                            <td><button onclick="openUserModal('${u._id}')" class="btn bg-blue-500 text-white">Manage</button></td>
                         </tr>
                     `;
                 });
             } else {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500">No users found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500">No users found.</td></tr>`;
+            }
+        }
+
+        let currentManageUserId = null;
+
+        async function openUserModal(userId) {
+            currentManageUserId = userId;
+            document.getElementById('userModal').classList.remove('hidden');
+            document.getElementById('modal-user-info').innerText = 'Loading...';
+            document.getElementById('modal-history-tbody').innerHTML = '';
+            
+            const data = await api(`/api/admin/users/${userId}`);
+            if (data.success) {
+                const u = data.user;
+                document.getElementById('modal-user-info').innerHTML = `
+                    <div class="grid grid-cols-2 gap-2 text-white">
+                        <div><strong>Mobile:</strong> ${u.mobile}</div>
+                        <div><strong>Name:</strong> ${u.name || 'User'}</div>
+                        <div><strong>Balance:</strong> <span class="text-green-400">$ ${u.balance.toFixed(2)}</span></div>
+                        <div><strong>Age/Sex:</strong> ${u.age || '-'} / ${u.sex || '-'}</div>
+                    </div>
+                `;
+                
+                const hBody = document.getElementById('modal-history-tbody');
+                if (u.history && u.history.length > 0) {
+                    u.history.forEach(h => {
+                        const statusColor = h.status === 'won' ? 'text-green-400' : (h.status === 'lost' ? 'text-red-400' : 'text-yellow-400');
+                        hBody.innerHTML += `
+                            <tr>
+                                <td>${h.period}</td>
+                                <td>${h.type}</td>
+                                <td>${h.value}</td>
+                                <td>$ ${h.amount}</td>
+                                <td class="${statusColor} font-bold capitalize">${h.status}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    hBody.innerHTML = `<tr><td colspan="5" class="text-center text-gray-500">No history found.</td></tr>`;
+                }
+            }
+        }
+
+        function closeUserModal() {
+            document.getElementById('userModal').classList.add('hidden');
+            currentManageUserId = null;
+        }
+
+        async function editBalance(action) {
+            const amt = document.getElementById('balanceAmt').value;
+            if (!amt || amt <= 0) return alert('Enter a valid amount');
+            
+            const res = await api(`/api/admin/users/${currentManageUserId}/balance`, 'POST', { amount: amt, action });
+            if (res.success) {
+                alert(`Balance updated successfully! New Balance: $ ${res.newBalance.toFixed(2)}`);
+                document.getElementById('balanceAmt').value = '';
+                openUserModal(currentManageUserId); // Refresh modal
+                loadUsers(); // Refresh background table
+            }
+        }
+
+        async function resetPassword() {
+            const pwd = document.getElementById('newPassword').value;
+            if (!pwd || pwd.length < 4) return alert('Password too short');
+            
+            const res = await api(`/api/admin/users/${currentManageUserId}/password`, 'POST', { newPassword: pwd });
+            if (res.success) {
+                alert('Password reset successfully!');
+                document.getElementById('newPassword').value = '';
             }
         }
 
@@ -294,6 +448,35 @@
                 const status = document.getElementById('force-status');
                 status.innerText = `Success! Next result forced to ${number}.`;
                 setTimeout(() => { status.innerText = ''; }, 5000);
+            }
+        }
+
+        async function loadLiveBets() {
+            const data = await api('/api/admin/live-bets');
+            if (data.success) {
+                document.getElementById('live-timer').innerText = data.timeLeft;
+                const tbody = document.getElementById('live-bets-tbody');
+                tbody.innerHTML = '';
+                
+                if (data.bets.length > 0) {
+                    data.bets.forEach(b => {
+                        let color = 'text-white';
+                        if(b.type === 'color') {
+                            if(b.value === 'Green') color = 'text-green-500';
+                            if(b.value === 'Red') color = 'text-red-500';
+                            if(b.value === 'Violet') color = 'text-purple-500';
+                        }
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="font-mono text-sm">${b.mobile}</td>
+                                <td class="font-bold ${color}">${b.value}</td>
+                                <td class="font-bold text-yellow-400">$ ${b.amount}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500 text-sm py-4">No bets in this round yet.</td></tr>`;
+                }
             }
         }
 
