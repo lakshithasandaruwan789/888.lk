@@ -177,6 +177,12 @@
                         <h3 class="font-bold text-lg text-yellow-500">Live Bets (Current Round)</h3>
                         <div class="text-sm text-gray-400">Time Left: <span id="live-timer" class="text-white font-bold font-mono">--</span>s</div>
                     </div>
+                    <!-- Added Color Summary -->
+                    <div class="grid grid-cols-3 gap-2 mb-4 text-center text-sm font-bold">
+                        <div class="bg-green-500/20 text-green-500 p-2 rounded border border-green-500/50">Green: $<span id="tot-green">0</span></div>
+                        <div class="bg-red-500/20 text-red-500 p-2 rounded border border-red-500/50">Red: $<span id="tot-red">0</span></div>
+                        <div class="bg-purple-500/20 text-purple-500 p-2 rounded border border-purple-500/50">Violet: $<span id="tot-violet">0</span></div>
+                    </div>
                     <div class="overflow-y-auto max-h-[300px]">
                         <table class="w-full">
                             <thead>
@@ -477,13 +483,15 @@
                 const tbody = document.getElementById('live-bets-tbody');
                 tbody.innerHTML = '';
                 
+                let tGreen = 0, tRed = 0, tViolet = 0;
+                
                 if (data.bets.length > 0) {
                     data.bets.forEach(b => {
                         let color = 'text-white';
                         if(b.type === 'color') {
-                            if(b.value === 'Green') color = 'text-green-500';
-                            if(b.value === 'Red') color = 'text-red-500';
-                            if(b.value === 'Violet') color = 'text-purple-500';
+                            if(b.value === 'Green') { color = 'text-green-500'; tGreen += parseFloat(b.amount); }
+                            if(b.value === 'Red') { color = 'text-red-500'; tRed += parseFloat(b.amount); }
+                            if(b.value === 'Violet') { color = 'text-purple-500'; tViolet += parseFloat(b.amount); }
                         }
                         tbody.innerHTML += `
                             <tr>
@@ -496,6 +504,10 @@
                 } else {
                     tbody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500 text-sm py-4">No bets in this round yet.</td></tr>`;
                 }
+
+                document.getElementById('tot-green').innerText = tGreen.toFixed(2);
+                document.getElementById('tot-red').innerText = tRed.toFixed(2);
+                document.getElementById('tot-violet').innerText = tViolet.toFixed(2);
             }
         }
 
