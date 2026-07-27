@@ -148,9 +148,9 @@
             <div class="flex justify-between mb-4">
                 <span>Contract Money</span>
                 <div class="flex gap-2">
-                    <button onclick="setAmount(10)" class="border px-2 py-1 rounded border-blue-500 text-blue-500 font-bold">10</button>
-                    <button onclick="setAmount(100)" class="border px-2 py-1 rounded">100</button>
-                    <button onclick="setAmount(1000)" class="border px-2 py-1 rounded">1000</button>
+                    <button id="btn-amt-10" onclick="setAmount(10)" class="border px-2 py-1 rounded border-blue-500 text-blue-500 font-bold amt-btn">10</button>
+                    <button id="btn-amt-100" onclick="setAmount(100)" class="border px-2 py-1 rounded amt-btn">100</button>
+                    <button id="btn-amt-1000" onclick="setAmount(1000)" class="border px-2 py-1 rounded amt-btn">1000</button>
                 </div>
             </div>
             <div class="flex justify-between items-center mb-6">
@@ -243,6 +243,14 @@
         function setAmount(amt) {
             selectedAmount = amt;
             document.getElementById('totalMoney').innerText = selectedAmount * qty;
+            
+            document.querySelectorAll('.amt-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-blue-500', 'font-bold');
+            });
+            const selectedBtn = document.getElementById('btn-amt-' + amt);
+            if (selectedBtn) {
+                selectedBtn.classList.add('border-blue-500', 'text-blue-500', 'font-bold');
+            }
         }
 
         function adjustQty(val) {
