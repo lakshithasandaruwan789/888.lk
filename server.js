@@ -149,6 +149,7 @@ app.post('/api/deposit', async (req, res) => {
             referenceNumber
         });
         await newTx.save();
+        io.emit('admin_alert', { type: 'deposit', amount: parseFloat(amount), mobile: user.mobile });
         res.json({ success: true, message: 'Deposit request submitted successfully! Pending approval.' });
     } catch (err) {
         res.json({ success: false, message: 'Database error.' });
@@ -177,7 +178,7 @@ app.post('/api/withdraw', async (req, res) => {
             withdrawalAddress
         });
         await newTx.save();
-        
+        io.emit('admin_alert', { type: 'withdraw', amount: parseFloat(amount), mobile: user.mobile });
         res.json({ success: true, message: 'Withdrawal request submitted successfully! Pending approval.', newBalance: user.balance });
     } catch (err) {
         res.json({ success: false, message: 'Database error.' });
