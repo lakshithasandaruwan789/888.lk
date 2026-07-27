@@ -44,8 +44,8 @@
     <main class="p-3 space-y-4">
         <div class="card p-3 shadow-lg">
             <div class="flex items-center justify-between mb-4">
-                <div class="w-8 h-8 rounded-full bg-[#1a2942] flex items-center justify-center text-gray-400 font-bold">?</div>
-                <div class="flex gap-2" id="history-circles">
+                <div class="w-8 h-8 rounded-full flex-shrink-0 bg-[#1a2942] flex items-center justify-center text-gray-400 font-bold">?</div>
+                <div class="flex gap-1 flex-wrap justify-end" id="history-circles">
                     <!-- Populated by JS -->
                 </div>
                 <div class="w-8 h-8 rounded bg-[#1a2942] flex items-center justify-center text-blue-300">
@@ -314,9 +314,9 @@
                 else if(item.result.colorKey === 'RedViolet') cssClass = 'split-0';
                 else if(item.result.colorKey === 'GreenViolet') cssClass = 'split-5';
 
-                // Render Top Circles (only top 5)
-                if(circles && index < 5) {
-                    circles.innerHTML += `<span class="w-7 h-7 rounded-full ${cssClass} flex items-center justify-center font-bold text-xs shadow-md text-white">${item.result.number}</span>`;
+                // Render Top Circles (only top 10)
+                if(circles && index < 10) {
+                    circles.innerHTML += `<span class="w-6 h-6 rounded-full flex-shrink-0 ${cssClass} flex items-center justify-center font-bold text-[10px] shadow text-white">${item.result.number}</span>`;
                 }
 
                 // Render Table
