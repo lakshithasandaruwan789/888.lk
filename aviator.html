@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>888.lk - Aviator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <script src="/socket.io/socket.io.js"></script>
     <style>
         body { background-color: #0b1526; color: #ffffff; font-family: 'Roboto', sans-serif; padding-bottom: 70px; }
         .header-bg { background-color: #0e1a30; border-bottom: 1px solid #1a2942; }
@@ -190,16 +190,31 @@
             activePlayers = data.players || [];
             renderPlayers();
             
-            // Check if I already bet
             const myBet = activePlayers.find(p => p.userId === userId);
             if(myBet) {
                 myBetPlaced = true;
                 myBetAmount = myBet.amount;
-                // Since this is just init, we might have already cashed out or still flying
-                // We'll reset cashedOut to false if waiting, else keep track properly later
             }
 
             updateUIForState();
+
+            if (gameState === 'FLYING') {
+                statusText.innerText = "FLYING...";
+                multDisplay.style.color = '#ef4444';
+                startAnimation();
+            } else if (gameState === 'WAITING') {
+                multDisplay.style.color = '#10b981';
+                let waitT = data.waitTime;
+                statusText.innerText = `NEXT ROUND IN ${waitT.toFixed(1)}s`;
+                let interval = setInterval(() => {
+                    if (gameState !== 'WAITING') { clearInterval(interval); return; }
+                    waitT -= 0.1;
+                    if(waitT > 0) statusText.innerText = `NEXT ROUND IN ${waitT.toFixed(1)}s`;
+                }, 100);
+            } else if (gameState === 'CRASHED') {
+                statusText.innerText = "CRASHED";
+                multDisplay.style.color = '#6b7280';
+            }
         });
 
         socket.on('aviator_waiting', (data) => {
@@ -401,9 +416,9 @@
                     <div class="player-row py-2 flex justify-between items-center text-sm">
                         <div class="flex items-center gap-2">
                             <div class="w-6 h-6 bg-blue-900 rounded-full flex items-center justify-center font-bold text-xs">
-                                ${p.name.charAt(0).toUpperCase()}
+                                ${(p.name || 'User').charAt(0).toUpperCase()}
                             </div>
-                            <span class="text-gray-300">${p.name}</span>
+                            <span class="text-gray-300">${p.name || 'User'}</span>
                         </div>
                         <div class="font-bold text-green-400">$ ${p.amount.toFixed(2)}</div>
                     </div>
