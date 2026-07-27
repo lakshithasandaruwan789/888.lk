@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const betHistorySchema = new mongoose.Schema({
     id: String,
-    period: Number,
+    period: String,
     type: { type: String }, // 'number' or 'color'
     value: String,
     amount: Number,

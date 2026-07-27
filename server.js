@@ -29,16 +29,32 @@ let currentBets = [];
 let forcedResult = null;
 let gameHistoryCache = [];
 
+function getNextPeriodId(lastPeriod = null) {
+    const d = new Date();
+    const pad = (n) => n.toString().padStart(2, '0');
+    const todayStr = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}`;
+
+    if (lastPeriod && String(lastPeriod).startsWith(todayStr)) {
+        const seq = parseInt(String(lastPeriod).slice(-4)) + 1;
+        return todayStr + seq.toString().padStart(4, '0');
+    }
+    return todayStr + '0001';
+}
+
+let currentPeriod = getNextPeriodId();
+
 // Pre-load game history on startup
 Game.find().sort({ createdAt: -1 }).limit(20).then(games => {
-    gameHistoryCache = games.map(g => ({ period: g.period, result: g.result }));
+    gameHistoryCache = games.map(g => ({ period: String(g.period), result: g.result }));
+    if (games.length > 0) {
+        currentPeriod = getNextPeriodId(games[0].period);
+    }
 });
 
 let GAME_LOOP_SECONDS = 30;
 let REFERRAL_BONUS = 500;
 let timeLeft = GAME_LOOP_SECONDS;
 let isBettingFrozen = false;
-let currentPeriod = Date.now();
 
 const OUTCOMES = {
   0: { color: 'RedViolet', label: 'Red & Violet' },
@@ -599,7 +615,7 @@ setInterval(async () => {
 
     setTimeout(() => {
       currentBets = [];
-      currentPeriod = Date.now();
+      currentPeriod = getNextPeriodId(currentPeriod);
       timeLeft = GAME_LOOP_SECONDS;
       isBettingFrozen = false;
       broadcastAdminUpdate();
