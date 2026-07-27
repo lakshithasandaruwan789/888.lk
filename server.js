@@ -50,6 +50,23 @@ function getNextPeriodId() {
     return todayStr + seq.toString().padStart(4, '0');
 }
 
+function getPeriodIdForTimestamp(ts) {
+    const d = new Date(ts);
+    const slTime = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Colombo' }));
+    
+    const pad = (n) => n.toString().padStart(2, '0');
+    const todayStr = `${slTime.getFullYear()}${pad(slTime.getMonth()+1)}${pad(slTime.getDate())}`;
+
+    const hours = slTime.getHours();
+    const minutes = slTime.getMinutes();
+    const seconds = slTime.getSeconds();
+
+    const totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+    const seq = Math.floor(totalSeconds / GAME_LOOP_SECONDS) + 1;
+
+    return todayStr + seq.toString().padStart(4, '0');
+}
+
 let currentPeriod = getNextPeriodId();
 
 // Pre-load game history on startup
@@ -866,8 +883,9 @@ io.on('connection', async (socket) => {
   socket.on('admin_schedule_result', (data, callback) => {
     const { timestamp, number } = data;
     const id = Date.now().toString();
+    const targetPeriod = getPeriodIdForTimestamp(parseInt(timestamp));
     const result = { number: parseInt(number), colorLabel: OUTCOMES[number].label, colorKey: OUTCOMES[number].color };
-    scheduledTimes.push({ id, timestamp: parseInt(timestamp), result });
+    scheduledTimes.push({ id, timestamp: parseInt(timestamp), result, targetPeriod });
     broadcastAdminUpdate();
     callback({ success: true });
   });
