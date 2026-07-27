@@ -213,6 +213,7 @@
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-lg text-yellow-500">Live Bets (Current Round)</h3>
                         <div class="text-sm text-gray-400 text-right">
+                            Period: <span id="current-period-display" class="text-purple-400 font-bold font-mono">--</span><br>
                             Time Left: <span id="live-timer" class="text-white font-bold font-mono">--</span>s<br>
                             Forced: <span id="forced-status-display" class="text-blue-400 font-bold">None</span>
                         </div>
@@ -763,6 +764,7 @@
                 let forcedStr = 'None';
                 if (data.forcedResult) forcedStr = `${data.forcedResult.number} (${data.forcedResult.colorLabel})`;
                 document.getElementById('forced-status-display').innerText = forcedStr;
+                document.getElementById('current-period-display').innerText = data.currentPeriod;
 
                 serverCurrentPeriod = data.currentPeriod;
                 serverGameLoopSeconds = data.GAME_LOOP_SECONDS;
