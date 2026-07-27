@@ -16,7 +16,7 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
 const io = new Server(server, { cors: { origin: '*' } });

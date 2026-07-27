@@ -8,6 +8,7 @@ const transactionSchema = new mongoose.Schema({
     paymentMethod: { type: String, default: 'USDT TRC20' },
     referenceNumber: { type: String, default: '' }, // For deposits (Tx Hash)
     withdrawalAddress: { type: String, default: '' }, // For withdrawals
+    receiptImage: { type: String, default: '' } // Base64 or URL
 }, { timestamps: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
