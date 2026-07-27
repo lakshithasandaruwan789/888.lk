@@ -149,6 +149,24 @@ app.post('/api/upload-avatar', async (req, res) => {
     }
 });
 
+app.post('/api/user/change-password', async (req, res) => {
+    const userId = req.headers.authorization;
+    const { oldPassword, newPassword } = req.body;
+    if (!userId || !oldPassword || !newPassword) return res.json({ success: false, message: 'Missing details.' });
+    
+    try {
+        const user = await User.findById(userId);
+        if (!user) return res.json({ success: false, message: 'User not found.' });
+        if (user.password !== oldPassword) return res.json({ success: false, message: 'Old password is incorrect.' });
+        
+        user.password = newPassword;
+        await user.save();
+        res.json({ success: true, message: 'Password updated successfully!' });
+    } catch (e) {
+        res.json({ success: false, message: 'Database error.' });
+    }
+});
+
 app.post('/api/deposit', async (req, res) => {
     const userId = req.headers.authorization;
     const { amount, referenceNumber } = req.body;

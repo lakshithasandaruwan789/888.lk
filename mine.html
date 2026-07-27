@@ -125,7 +125,7 @@
                 </div>
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </div>
-            <div class="menu-item p-4 border-b border-[#1a2942] flex items-center justify-between cursor-pointer">
+            <div class="menu-item p-4 border-b border-[#1a2942] flex items-center justify-between cursor-pointer" onclick="openPasswordModal()">
                 <div class="flex items-center gap-3 text-gray-200">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                     Change Password
@@ -140,6 +140,33 @@
             </div>
         </div>
     </main>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 bg-black/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-[#121e36] rounded-xl w-full max-w-sm border border-[#1a2942] shadow-2xl overflow-hidden transform scale-95 transition-transform duration-300">
+            <div class="bg-blue-600 p-4 text-center">
+                <h3 class="text-white font-bold text-lg">Change Password</h3>
+            </div>
+            <div class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Old Password</label>
+                    <input type="password" id="oldPassword" class="w-full bg-[#0a1122] border border-[#1a2942] rounded px-3 py-2 text-white focus:border-blue-500 focus:outline-none placeholder-gray-600" placeholder="Enter current password">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">New Password</label>
+                    <input type="password" id="newPassword" class="w-full bg-[#0a1122] border border-[#1a2942] rounded px-3 py-2 text-white focus:border-blue-500 focus:outline-none placeholder-gray-600" placeholder="Enter new password">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 mb-1">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="w-full bg-[#0a1122] border border-[#1a2942] rounded px-3 py-2 text-white focus:border-blue-500 focus:outline-none placeholder-gray-600" placeholder="Confirm new password">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closePasswordModal()" class="flex-1 py-2 rounded font-bold text-gray-300 bg-[#1a2942]">Cancel</button>
+                    <button onclick="changePassword()" class="flex-1 py-2 rounded font-bold text-white bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.5)]">Update</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto header-bg flex justify-around items-end pb-2 pt-1 z-40 text-[10px] font-bold shadow-[0_-4px_10px_rgba(0,0,0,0.3)]">
@@ -276,6 +303,43 @@
             if(confirm('Are you sure you want to logout?')) {
                 localStorage.removeItem('auth_token');
                 window.location.href = 'login.html';
+            }
+        }
+
+        function openPasswordModal() {
+            document.getElementById('passwordModal').classList.remove('hidden');
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').classList.add('hidden');
+        }
+
+        async function changePassword() {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!oldPassword || !newPassword || !confirmPassword) return alert('Please fill all fields');
+            if (newPassword !== confirmPassword) return alert('New passwords do not match');
+            if (newPassword.length < 6) return alert('Password must be at least 6 characters');
+
+            const token = localStorage.getItem('auth_token');
+            try {
+                const res = await fetch('/api/user/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) {
+                    closePasswordModal();
+                }
+            } catch (err) {
+                alert('Failed to connect to server');
             }
         }
         
