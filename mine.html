@@ -62,6 +62,7 @@
             <div class="flex items-center gap-2 mb-6">
                 <span class="text-yellow-400 text-2xl">🪙</span>
                 <span class="text-3xl font-black tracking-tight" id="profile-balance">0.00</span>
+                <span class="text-green-400 font-bold ml-2 text-lg" id="profile-balance-usd">($0.00)</span>
             </div>
             
             <div class="flex gap-3">
@@ -188,7 +189,9 @@
                     masked = m.substring(0,3) + '****' + m.substring(m.length - 3);
                 }
                 document.getElementById('profile-mobile').innerText = masked;
-                document.getElementById('profile-balance').innerText = parseFloat(data.balance || 0).toFixed(2);
+                const bal = parseFloat(data.balance || 0);
+                document.getElementById('profile-balance').innerText = bal.toFixed(2);
+                document.getElementById('profile-balance-usd').innerText = '($' + (bal / 100).toFixed(2) + ')';
                 
                 document.getElementById('profile-name').innerText = data.name || 'User';
                 document.getElementById('profile-country').innerText = data.country || 'Sri Lanka 🇱🇰';
@@ -213,7 +216,9 @@
         .catch(err => console.error(err));
 
         socket.on('update_balance', (balance) => {
-            document.getElementById('profile-balance').innerText = parseFloat(balance || 0).toFixed(2);
+            const bal = parseFloat(balance || 0);
+            document.getElementById('profile-balance').innerText = bal.toFixed(2);
+            document.getElementById('profile-balance-usd').innerText = '($' + (bal / 100).toFixed(2) + ')';
         });
 
         function uploadAvatar(input) {

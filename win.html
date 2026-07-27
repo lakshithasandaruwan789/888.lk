@@ -35,7 +35,8 @@
         <div class="flex items-center gap-2">
             <div class="flex items-center gap-2 bg-[#1a2942] px-3 py-1 rounded-full">
                 <span class="text-yellow-400 text-lg">🪙</span>
-                <span id="balance" class="font-bold text-sm">50000.00</span>
+                <span id="balance" class="font-bold text-sm">0.00</span>
+                <span id="balance-usd" class="font-bold text-xs text-green-400">($0.00)</span>
             </div>
         </div>
     </header>
@@ -185,7 +186,9 @@
         const socket = io({ query: { userId } });
 
         socket.on('update_balance', (balance) => {
-            document.getElementById('balance').innerText = balance.toFixed(2);
+            const bal = parseFloat(balance);
+            document.getElementById('balance').innerText = bal.toFixed(2);
+            document.getElementById('balance-usd').innerText = '($' + (bal / 100).toFixed(2) + ')';
         });
 
         socket.on('time_left', (data) => {
@@ -213,7 +216,9 @@
 
         socket.on('bet_won', (data) => {
             showToast(`🎉 You Won! Payout: ${data.payout}`);
-            document.getElementById('user-balance').innerText = parseFloat(data.newBalance).toFixed(2);
+            const bal = parseFloat(data.newBalance);
+            document.getElementById('balance').innerText = bal.toFixed(2);
+            document.getElementById('balance-usd').innerText = '($' + (bal / 100).toFixed(2) + ')';
         });
 
         // UI Logic
@@ -275,7 +280,9 @@
             }, (response) => {
                 isSubmitting = false; // Release lock
                 if(response.success) {
-                    document.getElementById('balance').innerText = parseFloat(response.newBalance).toFixed(2);
+                    const bal = parseFloat(response.newBalance);
+                    document.getElementById('balance').innerText = bal.toFixed(2);
+                    document.getElementById('balance-usd').innerText = '($' + (bal / 100).toFixed(2) + ')';
                     showToast('Bet placed successfully!');
                     closeBetModal();
                 } else {
