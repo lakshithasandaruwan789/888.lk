@@ -43,8 +43,10 @@
             <div class="nav-item nav-active" onclick="showSection('dashboard', this)">Dashboard</div>
             <div class="nav-item" onclick="showSection('deposits', this)">Pending Deposits</div>
             <div class="nav-item" onclick="showSection('withdrawals', this)">Pending Withdrawals</div>
+            <div class="nav-item" onclick="showSection('tx-history', this)">Tx History (Undo)</div>
             <div class="nav-item" onclick="showSection('users', this)">Users List</div>
             <div class="nav-item" onclick="showSection('game', this)">Game Control</div>
+            <div class="nav-item" onclick="showSection('game-history', this)">Game History</div>
         </div>
         <div class="p-4 border-t border-[#1a2942]">
             <button onclick="logout()" class="w-full py-2 bg-[#1a2942] hover:bg-red-500 hover:text-white rounded text-gray-400 font-bold transition">Logout</button>
@@ -175,7 +177,10 @@
                 <div class="card p-6 flex-1">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-lg text-yellow-500">Live Bets (Current Round)</h3>
-                        <div class="text-sm text-gray-400">Time Left: <span id="live-timer" class="text-white font-bold font-mono">--</span>s</div>
+                        <div class="text-sm text-gray-400 text-right">
+                            Time Left: <span id="live-timer" class="text-white font-bold font-mono">--</span>s<br>
+                            Forced: <span id="forced-status-display" class="text-blue-400 font-bold">None</span>
+                        </div>
                     </div>
                     <!-- Added Color Summary -->
                     <div class="grid grid-cols-3 gap-2 mb-4 text-center text-sm font-bold">
@@ -199,6 +204,47 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+
+        <!-- Tx History Section -->
+        <div id="tx-history" class="section">
+            <h2 class="text-2xl font-bold mb-6 border-b border-[#1a2942] pb-2">Transaction History</h2>
+            <div class="card overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>User (Mobile)</th>
+                            <th>Type</th>
+                            <th>Amount ($)</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tx-history-tbody">
+                        <tr><td colspan="6" class="text-center text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Game History Section -->
+        <div id="game-history" class="section">
+            <h2 class="text-2xl font-bold mb-6 border-b border-[#1a2942] pb-2">Game History</h2>
+            <div class="card overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Winning Number</th>
+                            <th>Color</th>
+                        </tr>
+                    </thead>
+                    <tbody id="game-history-tbody">
+                        <tr><td colspan="3" class="text-center text-gray-500">Loading...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -289,6 +335,8 @@
             if(id === 'deposits') loadTransactions('deposit');
             if(id === 'withdrawals') loadTransactions('withdraw');
             if(id === 'users') loadUsers();
+            if(id === 'tx-history') loadTxHistory();
+            if(id === 'game-history') loadGameHistory();
             if(id === 'game') {
                 loadLiveBets();
                 liveBetInterval = setInterval(loadLiveBets, 2000); // refresh every 2s
@@ -480,6 +528,10 @@
             const data = await api('/api/admin/live-bets');
             if (data.success) {
                 document.getElementById('live-timer').innerText = data.timeLeft;
+                let forcedStr = 'None';
+                if (data.forcedResult) forcedStr = `${data.forcedResult.number} (${data.forcedResult.colorLabel})`;
+                document.getElementById('forced-status-display').innerText = forcedStr;
+
                 const tbody = document.getElementById('live-bets-tbody');
                 tbody.innerHTML = '';
                 
@@ -508,6 +560,71 @@
                 document.getElementById('tot-green').innerText = tGreen.toFixed(2);
                 document.getElementById('tot-red').innerText = tRed.toFixed(2);
                 document.getElementById('tot-violet').innerText = tViolet.toFixed(2);
+            }
+        }
+
+        async function loadTxHistory() {
+            const data = await api('/api/admin/transactions/history');
+            const tbody = document.getElementById('tx-history-tbody');
+            tbody.innerHTML = '';
+            
+            if(data.success && data.transactions.length > 0) {
+                data.transactions.forEach(tx => {
+                    const mobile = tx.userId ? tx.userId.mobile : 'Unknown';
+                    const date = new Date(tx.createdAt).toLocaleString();
+                    const statusColor = tx.status === 'approved' ? 'text-green-400' : 'text-red-400';
+                    
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="text-gray-400">${date}</td>
+                            <td class="font-bold">${mobile}</td>
+                            <td class="capitalize">${tx.type}</td>
+                            <td class="font-bold text-white">$ ${tx.amount.toFixed(2)}</td>
+                            <td class="${statusColor} font-bold capitalize">${tx.status}</td>
+                            <td>
+                                <button onclick="revertTx('${tx._id}')" class="btn bg-orange-500 text-white text-xs px-2 py-1">Undo</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-gray-500">No history found.</td></tr>`;
+            }
+        }
+
+        async function revertTx(id) {
+            if(!confirm(`Are you sure you want to UNDO this transaction? It will go back to Pending, and the user's balance will be adjusted automatically.`)) return;
+            const data = await api(`/api/admin/transactions/${id}/revert`, 'POST');
+            if(data.success) {
+                alert(`Transaction reversed back to Pending!`);
+                loadTxHistory(); // reload table
+            } else {
+                alert(data.message || 'Error reverting transaction.');
+            }
+        }
+
+        async function loadGameHistory() {
+            const data = await api('/api/admin/game-history');
+            const tbody = document.getElementById('game-history-tbody');
+            tbody.innerHTML = '';
+            
+            if(data.success && data.history.length > 0) {
+                data.history.forEach(h => {
+                    let colorClass = 'text-white';
+                    if (h.color === 'Green') colorClass = 'text-green-500';
+                    if (h.color === 'Red') colorClass = 'text-red-500';
+                    if (h.color === 'Violet') colorClass = 'text-purple-500';
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="text-gray-400 font-mono">${h.period}</td>
+                            <td class="font-bold text-lg">${h.number}</td>
+                            <td class="font-bold ${colorClass}">${h.colorLabel || h.color}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500">No history found.</td></tr>`;
             }
         }
 

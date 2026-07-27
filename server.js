@@ -291,10 +291,47 @@ app.get('/api/admin/live-bets', adminAuth, async (req, res) => {
             const user = await User.findById(bet.userId);
             return { ...bet, mobile: user ? user.mobile : 'Unknown' };
         }));
-        res.json({ success: true, bets: betsWithUser, timeLeft });
+        res.json({ success: true, bets: betsWithUser, timeLeft, forcedResult });
     } catch (e) {
         res.json({ success: false });
     }
+});
+
+app.get('/api/admin/transactions/history', adminAuth, async (req, res) => {
+    try {
+        const transactions = await Transaction.find({ status: { $ne: 'pending' } }).populate('userId', 'mobile name').sort({ updatedAt: -1 }).limit(100);
+        res.json({ success: true, transactions });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/transactions/:id/revert', adminAuth, async (req, res) => {
+    try {
+        const tx = await Transaction.findById(req.params.id);
+        if (!tx || tx.status === 'pending') return res.json({ success: false, message: 'Invalid transaction.' });
+        
+        const user = await User.findById(tx.userId);
+        if (!user) return res.json({ success: false, message: 'User not found.' });
+        
+        if (tx.type === 'deposit' && tx.status === 'approved') {
+            user.balance -= tx.amount;
+        } else if (tx.type === 'withdraw' && tx.status === 'rejected') {
+            user.balance -= tx.amount;
+        }
+        
+        tx.status = 'pending';
+        await tx.save();
+        await user.save();
+        
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.get('/api/admin/game-history', adminAuth, (req, res) => {
+    res.json({ success: true, history: gameHistoryCache });
 });
 
 app.get('/api/admin/users/:id', adminAuth, async (req, res) => {
