@@ -267,7 +267,7 @@
             }, (response) => {
                 isSubmitting = false; // Release lock
                 if(response.success) {
-                    document.getElementById('user-balance').innerText = parseFloat(response.newBalance).toFixed(2);
+                    document.getElementById('balance').innerText = parseFloat(response.newBalance).toFixed(2);
                     showToast('Bet placed successfully!');
                     closeBetModal();
                 } else {
