@@ -195,6 +195,96 @@ app.get('/api/transactions', async (req, res) => {
     }
 });
 
+// --- ADMIN API ENDPOINTS ---
+const ADMIN_TOKEN = 'admin_secret_token_123';
+
+app.post('/api/admin/login', (req, res) => {
+    const { username, password } = req.body;
+    if (username === 'admin' && password === '888admin') { 
+        res.json({ success: true, token: ADMIN_TOKEN });
+    } else {
+        res.json({ success: false, message: 'Invalid credentials.' });
+    }
+});
+
+// Admin Middleware
+function adminAuth(req, res, next) {
+    if (req.headers.authorization !== ADMIN_TOKEN) return res.json({ success: false, message: 'Unauthorized' });
+    next();
+}
+
+app.get('/api/admin/stats', adminAuth, async (req, res) => {
+    try {
+        const totalUsers = await User.countDocuments();
+        const users = await User.find();
+        const totalBalances = users.reduce((acc, u) => acc + u.balance, 0);
+        const pendingTxns = await Transaction.countDocuments({ status: 'pending' });
+        res.json({ success: true, totalUsers, totalBalances, pendingTxns, referralBonus: REFERRAL_BONUS });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/settings', adminAuth, (req, res) => {
+    if (req.body.referralBonus) REFERRAL_BONUS = parseFloat(req.body.referralBonus);
+    res.json({ success: true });
+});
+
+app.get('/api/admin/transactions', adminAuth, async (req, res) => {
+    try {
+        const { type } = req.query; // 'deposit' or 'withdraw'
+        const transactions = await Transaction.find({ status: 'pending', type }).populate('userId', 'mobile name').sort({ createdAt: 1 });
+        res.json({ success: true, transactions });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/transactions/:id/:action', adminAuth, async (req, res) => {
+    try {
+        const { id, action } = req.params; // action = 'approve' or 'reject'
+        const tx = await Transaction.findById(id);
+        if (!tx || tx.status !== 'pending') return res.json({ success: false, message: 'Invalid transaction.' });
+        
+        const user = await User.findById(tx.userId);
+        if (!user) return res.json({ success: false, message: 'User not found.' });
+        
+        if (tx.type === 'deposit') {
+            if (action === 'approve') {
+                user.balance += tx.amount;
+            }
+        } else if (tx.type === 'withdraw') {
+            if (action === 'reject') {
+                user.balance += tx.amount; // refund balance on reject
+            }
+        }
+        
+        tx.status = action === 'approve' ? 'approved' : 'rejected';
+        await tx.save();
+        await user.save();
+        
+        res.json({ success: true });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.get('/api/admin/users', adminAuth, async (req, res) => {
+    try {
+        const users = await User.find().sort({ createdAt: -1 });
+        res.json({ success: true, users });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/game', adminAuth, (req, res) => {
+    const { number } = req.body;
+    forcedResult = { number: parseInt(number), colorLabel: OUTCOMES[number].label, colorKey: OUTCOMES[number].color };
+    res.json({ success: true });
+});
+// ---------------------------
+
 function calculateWinningResult() {
   if (forcedResult !== null) {
     const res = forcedResult;

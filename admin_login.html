@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>888.lk - Admin Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0b1526; color: #ffffff; font-family: 'Roboto', sans-serif; }
+        .card { background-color: #121e36; border-radius: 8px; border: 1px solid #1a2942; }
+        .input-field { background-color: #0e1a30; border: 1px solid #1a2942; color: white; transition: all 0.2s; }
+        .input-field:focus { border-color: #f59e0b; outline: none; }
+    </style>
+</head>
+<body class="h-screen flex items-center justify-center p-4 relative select-none">
+    
+    <div class="card p-8 w-full max-w-sm shadow-2xl relative overflow-hidden">
+        <div class="absolute -right-10 -top-10 w-32 h-32 bg-yellow-500 opacity-10 blur-xl rounded-full"></div>
+        <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-blue-500 opacity-10 blur-xl rounded-full"></div>
+        
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-black text-white italic drop-shadow-md">ADMIN<span class="text-yellow-500 font-bold normal-case">.lk</span></h1>
+            <p class="text-gray-400 text-sm mt-1">Control Panel Access</p>
+        </div>
+        
+        <form id="adminForm" class="space-y-5">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1 font-bold">Username</label>
+                <input id="username" type="text" required class="input-field rounded w-full p-3 font-bold" placeholder="Enter Admin Username">
+            </div>
+            
+            <div>
+                <label class="block text-sm text-gray-400 mb-1 font-bold">Password</label>
+                <input id="password" type="password" required class="input-field rounded w-full p-3 font-bold" placeholder="••••••••">
+            </div>
+            
+            <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-400 text-[#0b1526] py-3 rounded font-bold shadow-lg transition active:scale-95 uppercase">
+                Login to Dashboard
+            </button>
+        </form>
+    </div>
+
+    <script>
+        if (localStorage.getItem('admin_token')) {
+            window.location.href = 'admin.html';
+        }
+
+        document.getElementById('adminForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const res = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    localStorage.setItem('admin_token', data.token);
+                    window.location.href = 'admin.html';
+                } else {
+                    alert(data.message);
+                }
+            } catch (err) {
+                alert('Server error.');
+            }
+        });
+    </script>
+</body>
+</html>
