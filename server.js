@@ -652,35 +652,52 @@ function broadcastAdminUpdate() {
   io.emit('admin_dashboard_update', { totals, scheduledTimes });
 }
 
+let isResolving = false;
 setInterval(async () => {
-  timeLeft--;
-  io.emit('time_left', { period: currentPeriod, timeLeft });
+  const d = new Date();
+  const slTime = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Colombo' }));
+  const totalSeconds = (slTime.getHours() * 3600) + (slTime.getMinutes() * 60) + slTime.getSeconds();
+  
+  let newTimeLeft = GAME_LOOP_SECONDS - (totalSeconds % GAME_LOOP_SECONDS);
+  
+  if (newTimeLeft <= 2) {
+    if (!isResolving) {
+      isResolving = true;
+      isBettingFrozen = true;
+      io.emit('betting_frozen', true);
 
-  if (timeLeft === 0) {
-    isBettingFrozen = true;
-    io.emit('betting_frozen', true);
+      const result = calculateWinningResult();
+      await processPayouts(result);
 
-    const result = calculateWinningResult();
-    await processPayouts(result);
+      const newGame = new Game({ period: currentPeriod, result });
+      await newGame.save();
+      
+      gameHistoryCache.unshift({ period: currentPeriod, result });
+      if (gameHistoryCache.length > 20) gameHistoryCache.pop();
 
-    const newGame = new Game({ period: currentPeriod, result });
-    await newGame.save();
-    
-    gameHistoryCache.unshift({ period: currentPeriod, result });
-    if (gameHistoryCache.length > 20) gameHistoryCache.pop();
-
-    io.emit('period_result', { period: currentPeriod, result });
-
-    setTimeout(() => {
-      currentBets = [];
-      currentPeriod = getNextPeriodId();
-      timeLeft = GAME_LOOP_SECONDS;
+      io.emit('period_result', { period: currentPeriod, result });
+    }
+    // Stay at 0 in UI during resolution
+    if (timeLeft !== 0) {
+      timeLeft = 0;
+      io.emit('time_left', { period: currentPeriod, timeLeft });
+    }
+  } else {
+    if (isResolving) {
+      // New round begins!
+      isResolving = false;
       isBettingFrozen = false;
+      currentPeriod = getNextPeriodId();
+      currentBets = [];
       broadcastAdminUpdate();
-      io.emit('new_period', { period: currentPeriod, timeLeft });
-    }, 2000);
+      io.emit('new_period', { period: currentPeriod, timeLeft: newTimeLeft });
+    }
+    if (timeLeft !== newTimeLeft) {
+      timeLeft = newTimeLeft;
+      io.emit('time_left', { period: currentPeriod, timeLeft });
+    }
   }
-}, 1000);
+}, 500);
 
 // --- AVIATOR GAME LOGIC ---
 let aviatorState = 'WAITING'; // WAITING, FLYING, CRASHED
