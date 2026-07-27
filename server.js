@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -169,19 +171,32 @@ app.post('/api/user/change-password', async (req, res) => {
 
 app.post('/api/deposit', async (req, res) => {
     const userId = req.headers.authorization;
-    const { amount, referenceNumber } = req.body;
+    const { amount, referenceNumber, receiptImage } = req.body;
     if (!userId || !amount || !referenceNumber || amount < 10) return res.json({ success: false, message: 'Invalid details or amount too low (Min $10).' });
     
     try {
         const user = await User.findById(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
 
+        let receiptUrl = '';
+        if (receiptImage) {
+            const base64Data = receiptImage.replace(/^data:image\/\w+;base64,/, '');
+            const ext = receiptImage.split(';')[0].split('/')[1] || 'jpg';
+            const filename = `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+            const uploadsDir = path.join(__dirname, 'uploads', 'receipts');
+            if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+            
+            fs.writeFileSync(path.join(uploadsDir, filename), base64Data, 'base64');
+            receiptUrl = `/uploads/receipts/${filename}`;
+        }
+
         const newTx = new Transaction({
             userId,
             type: 'deposit',
             amount: parseFloat(amount),
             status: 'pending',
-            referenceNumber
+            referenceNumber,
+            receiptImage: receiptUrl
         });
         await newTx.save();
         io.emit('admin_alert', { type: 'deposit', amount: parseFloat(amount), mobile: user.mobile });

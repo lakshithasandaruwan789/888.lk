@@ -64,7 +64,12 @@
                 <label class="block text-sm text-gray-400 mb-1">Transaction Hash (TxID)</label>
                 <input id="depRef" type="text" required class="input-field rounded w-full p-3 font-bold placeholder-gray-600" placeholder="Paste TxID here">
             </div>
-            <button type="submit" class="w-full bg-[#f3ba2f] text-[#0b1526] py-3 rounded font-bold mt-2 shadow-lg active:scale-95 transition hover:bg-yellow-400">
+            <div>
+                <label class="block text-sm text-gray-400 mb-1">Upload Screenshot (Proof)</label>
+                <input id="depImage" type="file" accept="image/*" required class="input-field rounded w-full p-2 text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-bold file:bg-[#f3ba2f] file:text-[#0b1526] hover:file:bg-yellow-400" onchange="previewImage(event)">
+                <img id="imagePreview" class="mt-3 rounded border border-[#1a2942] hidden max-h-48 mx-auto" />
+            </div>
+            <button type="submit" id="submitBtn" class="w-full bg-[#f3ba2f] text-[#0b1526] py-3 rounded font-bold mt-2 shadow-lg active:scale-95 transition hover:bg-yellow-400">
                 SUBMIT DEPOSIT
             </button>
         </form>
@@ -80,11 +85,35 @@
             });
         }
 
+        let base64Image = '';
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    base64Image = e.target.result;
+                    const img = document.getElementById('imagePreview');
+                    img.src = base64Image;
+                    img.classList.remove('hidden');
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
         document.getElementById('depositForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const amount = document.getElementById('depAmount').value;
             const referenceNumber = document.getElementById('depRef').value.trim();
+            const btn = document.getElementById('submitBtn');
             
+            if (!base64Image) {
+                return alert('Please upload a screenshot of your transfer.');
+            }
+
+            btn.innerText = 'UPLOADING...';
+            btn.disabled = true;
+
             try {
                 const res = await fetch('/api/deposit', {
                     method: 'POST',
@@ -92,7 +121,7 @@
                         'Content-Type': 'application/json',
                         'Authorization': userId
                     },
-                    body: JSON.stringify({ amount, referenceNumber })
+                    body: JSON.stringify({ amount, referenceNumber, receiptImage: base64Image })
                 });
                 const data = await res.json();
                 if(data.success) {
@@ -100,9 +129,13 @@
                     window.location.href = 'mine.html';
                 } else {
                     alert(data.message);
+                    btn.innerText = 'SUBMIT DEPOSIT';
+                    btn.disabled = false;
                 }
             } catch (err) {
                 alert('Server error. Please try again.');
+                btn.innerText = 'SUBMIT DEPOSIT';
+                btn.disabled = false;
             }
         });
     </script>
