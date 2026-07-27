@@ -594,7 +594,7 @@
 
         async function revertTx(id) {
             if(!confirm(`Are you sure you want to UNDO this transaction? It will go back to Pending, and the user's balance will be adjusted automatically.`)) return;
-            const data = await api(`/api/admin/transactions/${id}/revert`, 'POST');
+            const data = await api(`/api/admin/tx-revert/${id}`, 'POST');
             if(data.success) {
                 alert(`Transaction reversed back to Pending!`);
                 loadTxHistory(); // reload table

@@ -306,7 +306,7 @@ app.get('/api/admin/transactions/history', adminAuth, async (req, res) => {
     }
 });
 
-app.post('/api/admin/transactions/:id/revert', adminAuth, async (req, res) => {
+app.post('/api/admin/tx-revert/:id', adminAuth, async (req, res) => {
     try {
         const tx = await Transaction.findById(req.params.id);
         if (!tx || tx.status === 'pending') return res.json({ success: false, message: 'Invalid transaction.' });
