@@ -29,6 +29,7 @@ mongoose.connect(process.env.MONGODB_URI)
 // Memory State
 let currentBets = [];
 let forcedResult = null;
+let scheduledTimes = []; // Array of { id, timestamp, result: {number, colorLabel, colorKey} }
 let gameHistoryCache = [];
 
 function getNextPeriodId(lastPeriod = null) {
@@ -407,7 +408,7 @@ app.get('/api/admin/live-bets', adminAuth, async (req, res) => {
             const user = await User.findById(bet.userId);
             return { ...bet, mobile: user ? user.mobile : 'Unknown' };
         }));
-        res.json({ success: true, bets: betsWithUser, timeLeft, forcedResult });
+        res.json({ success: true, bets: betsWithUser, timeLeft, forcedResult, scheduledTimes, currentPeriod, GAME_LOOP_SECONDS });
     } catch (e) {
         res.json({ success: false });
     }
@@ -498,6 +499,19 @@ function calculateWinningResult() {
     const res = forcedResult;
     forcedResult = null;
     return res;
+  }
+
+  // Check scheduled times
+  const nowMs = Date.now();
+  // Sort just in case, though they should be inserted in order usually
+  scheduledTimes.sort((a, b) => a.timestamp - b.timestamp);
+  
+  const idx = scheduledTimes.findIndex(s => s.timestamp <= nowMs);
+  if (idx !== -1) {
+      const res = scheduledTimes[idx].result;
+      scheduledTimes.splice(idx, 1); // Remove the executed schedule
+      broadcastAdminUpdate(); // Update admins that a schedule was consumed
+      return res;
   }
 
   const liabilities = {};
@@ -612,7 +626,7 @@ function broadcastAdminUpdate() {
     if (bet.type === 'color') totals[bet.value] += bet.amount;
     if (bet.type === 'number') totals.numbers[bet.value] += bet.amount;
   });
-  io.emit('admin_dashboard_update', totals);
+  io.emit('admin_dashboard_update', { totals, scheduledTimes });
 }
 
 setInterval(async () => {
@@ -645,12 +659,89 @@ setInterval(async () => {
   }
 }, 1000);
 
+// --- AVIATOR GAME LOGIC ---
+let aviatorState = 'WAITING'; // WAITING, FLYING, CRASHED
+let aviatorStartTime = null;
+let aviatorCrashMultiplier = 1.00;
+let aviatorForcedCrash = null;
+let aviatorBets = []; // { userId, socketId, amount, betId, name }
+let aviatorWaitTime = 10.0;
+let aviatorCrashedTime = 0.0;
+
+function getAviatorMultiplier(startTime) {
+    if (!startTime) return 1.00;
+    const elapsedMs = Date.now() - startTime;
+    const seconds = elapsedMs / 1000;
+    const M = Math.pow(Math.E, 0.06 * seconds);
+    return Math.max(1.00, M);
+}
+
+function generateAviatorCrash() {
+    if (aviatorForcedCrash) {
+        let val = parseFloat(aviatorForcedCrash);
+        aviatorForcedCrash = null;
+        return val;
+    }
+    const r = Math.random();
+    if (r < 0.02) return 1.00; // 2% chance of instant crash
+    const mult = 1.00 / (1.0 - Math.random() * 0.99); // 1.00x to 100.00x
+    return parseFloat(mult.toFixed(2));
+}
+
+setInterval(() => {
+    if (aviatorState === 'WAITING') {
+        aviatorWaitTime -= 0.1;
+        if (aviatorWaitTime <= 0) {
+            aviatorState = 'FLYING';
+            aviatorCrashMultiplier = generateAviatorCrash();
+            aviatorStartTime = Date.now();
+            io.emit('aviator_start', { startTime: aviatorStartTime });
+        }
+    } else if (aviatorState === 'FLYING') {
+        const currentMult = getAviatorMultiplier(aviatorStartTime);
+        if (currentMult >= aviatorCrashMultiplier) {
+            aviatorState = 'CRASHED';
+            aviatorCrashedTime = 5.0; // 5 seconds wait before next round
+            io.emit('aviator_crashed', { multiplier: aviatorCrashMultiplier });
+            
+            // Process losses for users who didn't cash out
+            aviatorBets.forEach(async (bet) => {
+                 try {
+                     const user = await User.findById(bet.userId);
+                     if(user) {
+                         const idx = user.history.findIndex(h => h.id === bet.betId);
+                         if(idx > -1) {
+                             user.history[idx].status = 'lost';
+                             user.history[idx].result = { multiplier: aviatorCrashMultiplier };
+                             await user.save();
+                         }
+                     }
+                 } catch(e) {}
+            });
+            aviatorBets = []; // Clear bets for next round
+        }
+    } else if (aviatorState === 'CRASHED') {
+        aviatorCrashedTime -= 0.1;
+        if (aviatorCrashedTime <= 0) {
+            aviatorState = 'WAITING';
+            aviatorWaitTime = 10.0;
+            io.emit('aviator_waiting', { waitTime: aviatorWaitTime });
+        }
+    }
+}, 100);
+
 io.on('connection', async (socket) => {
   const userId = socket.handshake.query.userId;
 
   socket.emit('time_left', { period: currentPeriod, timeLeft });
   socket.emit('betting_frozen', isBettingFrozen);
   socket.emit('history_update', gameHistoryCache);
+  socket.emit('aviator_init', {
+      state: aviatorState,
+      startTime: aviatorStartTime,
+      waitTime: aviatorWaitTime,
+      players: aviatorBets
+  });
   
   if (userId && userId !== 'guest') {
       try {
@@ -667,6 +758,71 @@ io.on('connection', async (socket) => {
 
   socket.on('request_admin_data', () => {
     broadcastAdminUpdate();
+  });
+
+  // --- AVIATOR SOCKET EVENTS ---
+  socket.on('aviator_bet', async (data, callback) => {
+    if (aviatorState !== 'WAITING') return callback({ success: false, message: 'Please wait for the next round.' });
+    const { userId, amount } = data;
+    if(amount < 10) return callback({ success: false, message: 'Minimum bet is $10.' });
+    
+    try {
+        const user = await User.findById(userId);
+        if(!user || user.balance < amount) return callback({success: false, message: 'Insufficient balance.'});
+        if (aviatorBets.find(b => b.userId === userId)) return callback({ success: false, message: 'Already bet in this round.' });
+        
+        user.balance -= amount;
+        const betId = Date.now().toString();
+        user.history.unshift({ id: betId, period: 'AVIATOR', type: 'aviator', value: '0', amount, status: 'pending' });
+        await user.save();
+        
+        aviatorBets.push({ userId, amount, betId, name: user.name, socketId: socket.id });
+        
+        socket.emit('update_balance', user.balance);
+        io.emit('aviator_players', aviatorBets);
+        callback({ success: true, balance: user.balance });
+    } catch(e) {
+        callback({ success: false, message: 'Server error' });
+    }
+  });
+
+  socket.on('aviator_cashout', async (data, callback) => {
+    if (aviatorState !== 'FLYING') return callback({ success: false, message: 'Game is not flying!' });
+    const betIdx = aviatorBets.findIndex(b => b.userId === data.userId);
+    if (betIdx === -1) return callback({ success: false, message: 'No active bet found.' });
+    
+    const bet = aviatorBets[betIdx];
+    const currentMult = parseFloat(getAviatorMultiplier(aviatorStartTime).toFixed(2));
+    
+    if (currentMult >= aviatorCrashMultiplier) {
+        return callback({ success: false, message: 'Plane crashed already!' });
+    }
+    
+    aviatorBets.splice(betIdx, 1); // User successfully cashed out
+    const winAmount = bet.amount * currentMult;
+    
+    try {
+        const user = await User.findById(bet.userId);
+        if(user) {
+            user.balance += winAmount;
+            const hIdx = user.history.findIndex(h => h.id === bet.betId);
+            if(hIdx > -1) {
+                user.history[hIdx].status = 'won';
+                user.history[hIdx].result = { multiplier: currentMult };
+            }
+            await user.save();
+            socket.emit('update_balance', user.balance);
+            io.emit('aviator_players', aviatorBets); // update list for everyone
+            callback({ success: true, multiplier: currentMult, winAmount, balance: user.balance });
+        }
+    } catch(e) {
+        callback({ success: false, message: 'Server error' });
+    }
+  });
+
+  socket.on('admin_force_aviator', (data, callback) => {
+    aviatorForcedCrash = data.multiplier;
+    callback({ success: true });
   });
 
   socket.on('submit_bet', async (data, callback) => {
@@ -698,6 +854,22 @@ io.on('connection', async (socket) => {
 
   socket.on('admin_force_result', (data, callback) => {
     forcedResult = { number: parseInt(data.number), colorLabel: OUTCOMES[data.number].label, colorKey: OUTCOMES[data.number].color };
+    callback({ success: true });
+  });
+
+  socket.on('admin_schedule_result', (data, callback) => {
+    const { timestamp, number } = data;
+    const id = Date.now().toString();
+    const result = { number: parseInt(number), colorLabel: OUTCOMES[number].label, colorKey: OUTCOMES[number].color };
+    scheduledTimes.push({ id, timestamp: parseInt(timestamp), result });
+    broadcastAdminUpdate();
+    callback({ success: true });
+  });
+
+  socket.on('admin_remove_scheduled', (data, callback) => {
+    const { id } = data;
+    scheduledTimes = scheduledTimes.filter(s => s.id !== id);
+    broadcastAdminUpdate();
     callback({ success: true });
   });
 });

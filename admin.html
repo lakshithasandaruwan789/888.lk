@@ -240,6 +240,54 @@
                 </div>
 
             </div>
+            
+            <!-- Scheduled Rigging -->
+            <div class="card p-6 mt-6 border border-purple-500/50">
+                <h3 class="font-bold text-lg text-purple-400 mb-4">Scheduled Rigging (By Time)</h3>
+                <div class="bg-purple-500/10 text-purple-300 p-3 rounded mb-4 text-sm">
+                    <strong>Notice:</strong> Schedule a winning number for a specific time. The first round ending AFTER this time will use this result. Immediate forces take priority over scheduled ones.
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-4 mb-6 items-end">
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-400 mb-1">Target Time</label>
+                        <input type="datetime-local" id="schedule-time" class="input-field w-full" onchange="calculateProjectedPeriod()">
+                        <div id="projected-period-text" class="text-xs text-gray-400 mt-1 h-4">Select a time to project period ID</div>
+                    </div>
+                    <div class="w-32">
+                        <label class="block text-sm text-gray-400 mb-1">Number (0-9)</label>
+                        <select id="schedule-number" class="input-field w-full">
+                            <option value="0">0 (Red/Violet)</option>
+                            <option value="1">1 (Green)</option>
+                            <option value="2">2 (Red)</option>
+                            <option value="3">3 (Green)</option>
+                            <option value="4">4 (Red)</option>
+                            <option value="5">5 (Green/Violet)</option>
+                            <option value="6">6 (Red)</option>
+                            <option value="7">7 (Green)</option>
+                            <option value="8">8 (Red)</option>
+                            <option value="9">9 (Green)</option>
+                        </select>
+                    </div>
+                    <button onclick="scheduleResult()" class="btn bg-purple-600 hover:bg-purple-700 font-bold px-8 h-[42px]">SCHEDULE</button>
+                </div>
+                
+                <div class="overflow-y-auto max-h-[200px]">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs uppercase bg-[#1a2942] text-gray-400">
+                            <tr>
+                                <th class="px-4 py-2">Scheduled Time</th>
+                                <th class="px-4 py-2">Target Number</th>
+                                <th class="px-4 py-2 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scheduled-list-tbody">
+                            <tr><td colspan="3" class="text-center text-gray-500 py-2">No schedules set</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
         <!-- Aviator Control Section -->
@@ -705,6 +753,9 @@
             }
         }
 
+        let serverCurrentPeriod = '';
+        let serverGameLoopSeconds = 30;
+
         async function loadLiveBets() {
             const data = await api('/api/admin/live-bets');
             if (data.success) {
@@ -712,6 +763,10 @@
                 let forcedStr = 'None';
                 if (data.forcedResult) forcedStr = `${data.forcedResult.number} (${data.forcedResult.colorLabel})`;
                 document.getElementById('forced-status-display').innerText = forcedStr;
+
+                serverCurrentPeriod = data.currentPeriod;
+                serverGameLoopSeconds = data.GAME_LOOP_SECONDS;
+                calculateProjectedPeriod(); // Update live if time is selected
 
                 const tbody = document.getElementById('live-bets-tbody');
                 tbody.innerHTML = '';
@@ -741,7 +796,87 @@
                 document.getElementById('tot-green').innerText = tGreen.toFixed(2);
                 document.getElementById('tot-red').innerText = tRed.toFixed(2);
                 document.getElementById('tot-violet').innerText = tViolet.toFixed(2);
+
+                // Render Scheduled List
+                const schedTbody = document.getElementById('scheduled-list-tbody');
+                schedTbody.innerHTML = '';
+                if (data.scheduledTimes && data.scheduledTimes.length > 0) {
+                    data.scheduledTimes.forEach(s => {
+                        const dateObj = new Date(s.timestamp);
+                        const timeStr = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                        const dateStr = dateObj.toLocaleDateString();
+                        schedTbody.innerHTML += `
+                            <tr class="border-b border-[#1a2942]">
+                                <td class="px-4 py-2 font-mono text-blue-300">${dateStr} ${timeStr}</td>
+                                <td class="px-4 py-2 font-bold text-yellow-400">${s.result.number} (${s.result.colorLabel})</td>
+                                <td class="px-4 py-2 text-right">
+                                    <button onclick="removeScheduled('${s.id}')" class="text-red-500 hover:text-red-400 font-bold px-2 py-1 bg-red-500/10 rounded">CANCEL</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    schedTbody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-500 py-2">No schedules set</td></tr>`;
+                }
             }
+        }
+
+        function calculateProjectedPeriod() {
+            const timeInput = document.getElementById('schedule-time').value;
+            const projectedText = document.getElementById('projected-period-text');
+            
+            if (!timeInput || !serverCurrentPeriod) {
+                projectedText.innerText = "Select a time to project period ID";
+                return;
+            }
+
+            const targetMs = new Date(timeInput).getTime();
+            const nowMs = Date.now();
+            const diffMs = targetMs - nowMs;
+
+            if (diffMs <= 0) {
+                projectedText.innerText = "Target time must be in the future!";
+                projectedText.classList.replace('text-gray-400', 'text-red-400');
+                return;
+            }
+
+            projectedText.classList.replace('text-red-400', 'text-gray-400');
+            const loopsRemaining = Math.floor(diffMs / (serverGameLoopSeconds * 1000));
+            
+            // serverCurrentPeriod is YYYYMMDDXXXX
+            const seqStr = serverCurrentPeriod.toString().slice(-4);
+            const prefix = serverCurrentPeriod.toString().slice(0, -4);
+            let nextSeq = parseInt(seqStr) + loopsRemaining;
+            
+            // Simple projection (assumes same day, doesn't cross midnight perfectly in text)
+            let proj = prefix + nextSeq.toString().padStart(4, '0');
+            projectedText.innerHTML = `Predicted Period ID: <span class="font-bold text-purple-400">${proj}</span> (approx. ${loopsRemaining} rounds away)`;
+        }
+
+        function scheduleResult() {
+            const timeInput = document.getElementById('schedule-time').value;
+            const number = document.getElementById('schedule-number').value;
+            
+            if (!timeInput) return alert('Please select a target date and time.');
+            const timestamp = new Date(timeInput).getTime();
+            if (timestamp <= Date.now()) return alert('Target time must be in the future.');
+
+            socket.emit('admin_schedule_result', { timestamp, number }, (res) => {
+                if (res.success) {
+                    alert('Result successfully scheduled!');
+                    document.getElementById('schedule-time').value = '';
+                    calculateProjectedPeriod();
+                }
+            });
+        }
+
+        function removeScheduled(id) {
+            if(!confirm('Cancel this scheduled result?')) return;
+            socket.emit('admin_remove_scheduled', { id }, (res) => {
+                if(res.success) {
+                    // UI will update on next polling loop
+                }
+            });
         }
 
         async function loadTxHistory() {
