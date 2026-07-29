@@ -8,6 +8,7 @@ const betHistorySchema = new mongoose.Schema({
     amount: Number,
     status: { type: String, enum: ['pending', 'won', 'lost'], default: 'pending' },
     result: { type: Object, default: null },
+    payout: { type: Number, default: 0 },
     createdAt: { type: Date, default: Date.now }
 });
 

@@ -664,6 +664,7 @@ async function processPayouts(winningResult) {
                   if (histItem) {
                       histItem.status = upd.status;
                       histItem.result = upd.result;
+                      histItem.payout = upd.payout;
                   }
               });
               
@@ -856,7 +857,7 @@ io.on('connection', async (socket) => {
         
         user.balance -= amount;
         const betId = Date.now().toString();
-        user.history.unshift({ id: betId, period: 'AVIATOR', type: 'aviator', value: '0', amount, status: 'pending' });
+        user.history.unshift({ id: betId, period: 'AVIATOR', type: 'aviator', value: '0', amount, payout: 0, status: 'pending' });
         await user.save();
         
         aviatorBets.push({ userId, amount, betId, name: user.name, socketId: socket.id });
@@ -920,7 +921,7 @@ io.on('connection', async (socket) => {
         user.balance -= amount;
         
         const betId = Date.now().toString();
-        const betRecord = { id: betId, period: currentPeriod, type, value, amount, status: 'pending', result: null };
+        const betRecord = { id: betId, period: currentPeriod, type, value, amount, payout: 0, status: 'pending', result: null };
         user.history.unshift(betRecord);
         await user.save();
         
