@@ -39,6 +39,10 @@ let forcedResult = null;
 let scheduledTimes = []; // Array of { id, timestamp, result: {number, colorLabel, colorKey} }
 let gameHistoryCache = [];
 let GAME_ALGORITHM = 'min_liability'; // Default algorithm
+let GAME_LOOP_SECONDS = 30;
+let REFERRAL_BONUS = 500;
+let timeLeft = GAME_LOOP_SECONDS;
+let isBettingFrozen = false;
 
 function getNextPeriodId() {
     const d = new Date();
@@ -84,11 +88,6 @@ Game.find().sort({ createdAt: -1 }).limit(20).then(games => {
         currentPeriod = getNextPeriodId();
     }
 });
-
-let GAME_LOOP_SECONDS = 30;
-let REFERRAL_BONUS = 500;
-let timeLeft = GAME_LOOP_SECONDS;
-let isBettingFrozen = false;
 
 const OUTCOMES = {
   0: { color: 'RedViolet', label: 'Red & Violet' },
