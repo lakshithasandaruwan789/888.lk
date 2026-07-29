@@ -23,7 +23,14 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB Atlas Database'))
+  .then(async () => {
+      console.log('✅ Connected to MongoDB Atlas Database');
+      // Load Initial Settings
+      try {
+          let algoSetting = await Setting.findOne({ key: 'game_algorithm' });
+          if (algoSetting) GAME_ALGORITHM = algoSetting.value;
+      } catch(e) {}
+  })
   .catch(err => console.error('❌ MongoDB Connection Error:', err));
 
 // Memory State
@@ -31,6 +38,7 @@ let currentBets = [];
 let forcedResult = null;
 let scheduledTimes = []; // Array of { id, timestamp, result: {number, colorLabel, colorKey} }
 let gameHistoryCache = [];
+let GAME_ALGORITHM = 'min_liability'; // Default algorithm
 
 function getNextPeriodId() {
     const d = new Date();
@@ -366,6 +374,34 @@ app.post('/api/admin/settings/banner', adminAuth, async (req, res) => {
     }
 });
 
+app.get('/api/admin/settings/algorithm', adminAuth, async (req, res) => {
+    try {
+        let algoSetting = await Setting.findOne({ key: 'game_algorithm' });
+        const algo = algoSetting ? algoSetting.value : 'min_liability';
+        GAME_ALGORITHM = algo; // sync memory
+        res.json({ success: true, algorithm: algo });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
+app.post('/api/admin/settings/algorithm', adminAuth, async (req, res) => {
+    try {
+        let { algorithm } = req.body;
+        if (!['min_liability', 'true_random'].includes(algorithm)) algorithm = 'min_liability';
+        
+        await Setting.findOneAndUpdate(
+            { key: 'game_algorithm' },
+            { value: algorithm },
+            { upsert: true }
+        );
+        GAME_ALGORITHM = algorithm; // sync memory
+        res.json({ success: true, algorithm });
+    } catch (e) {
+        res.json({ success: false });
+    }
+});
+
 app.post('/api/admin/settings', adminAuth, (req, res) => {
     if (req.body.referralBonus) REFERRAL_BONUS = parseFloat(req.body.referralBonus);
     res.json({ success: true });
@@ -537,6 +573,13 @@ function calculateWinningResult() {
       return res;
   }
 
+  // --- ALGORITHM LOGIC ---
+  if (GAME_ALGORITHM === 'true_random') {
+      const winningNumber = Math.floor(Math.random() * 10);
+      return { number: winningNumber, colorLabel: OUTCOMES[winningNumber].label, colorKey: OUTCOMES[winningNumber].color };
+  }
+
+  // default: min_liability
   const liabilities = {};
   for (let i = 0; i <= 9; i++) liabilities[i] = 0;
 

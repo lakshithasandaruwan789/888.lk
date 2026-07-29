@@ -289,6 +289,27 @@
                 </div>
             </div>
 
+            <!-- Game Algorithm Toggle -->
+            <div class="card p-6 mt-6 border border-indigo-500/50">
+                <h3 class="font-bold text-lg text-indigo-400 mb-4">Game Algorithm Mode (Player Hook)</h3>
+                <div class="bg-indigo-500/10 text-indigo-300 p-3 rounded mb-4 text-sm">
+                    <strong>Notice:</strong> 
+                    <ul class="list-disc ml-5 mt-1">
+                        <li><strong>Minimum Liability:</strong> House ALWAYS wins. Server calculates bets and forces the outcome that pays out the least amount of money. Good for many active players.</li>
+                        <li><strong>True Random (Hook Mode):</strong> Outcomes are 100% random. Players win naturally and get hooked. House still mathematically profits in the long run (Casino House Edge). Good for single players/new sites.</li>
+                    </ul>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <label class="font-bold">Select Mode:</label>
+                    <select id="algo-select" class="input-field w-64" onchange="updateAlgorithm()">
+                        <option value="min_liability">Minimum Liability (Strict)</option>
+                        <option value="true_random">True Random (Fair/Hook)</option>
+                    </select>
+                    <span id="algo-status" class="text-sm font-bold text-green-400 opacity-0 transition-opacity">Saved!</span>
+                </div>
+            </div>
+
         </div>
 
         <!-- Aviator Control Section -->
@@ -980,13 +1001,37 @@
             if (data.success) {
                 alert('Banner removed successfully!');
                 loadBanners();
-            } else {
-                alert('Error removing banner');
             }
+        }
+
+        async function loadAlgorithm() {
+            const data = await api('/api/admin/settings/algorithm');
+            if (data.success) {
+                document.getElementById('algo-select').value = data.algorithm;
+            }
+        }
+
+        async function updateAlgorithm() {
+            const algo = document.getElementById('algo-select').value;
+            const data = await api('/api/admin/settings/algorithm', 'POST', { algorithm: algo });
+            if (data.success) {
+                const status = document.getElementById('algo-status');
+                status.classList.remove('opacity-0');
+                setTimeout(() => status.classList.add('opacity-0'), 2000);
+            } else {
+                alert('Failed to update algorithm');
+            }
+        }
+
+        function showPage(pageId) {
+            document.querySelectorAll('.section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
         }
 
         // Initial load
         loadStats();
+        loadBanners();
+        loadAlgorithm();
     </script>
 </body>
 </html>
