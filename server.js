@@ -6,6 +6,15 @@ const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET || '888lk_super_secret_key_2026';
+
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 const User = require('./models/User');
 const Game = require('./models/Game');
@@ -18,8 +27,19 @@ const server = http.createServer(app);
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 const io = new Server(server, { cors: { origin: '*' } });
+
+function getUserIdFromAuth(authHeader) {
+    if (!authHeader) return null;
+    try {
+        const decoded = jwt.verify(authHeader, JWT_SECRET);
+        return decoded.userId;
+    } catch (e) {
+        return authHeader; // Fallback for old plaintext IDs
+    }
+}
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI)
@@ -125,9 +145,12 @@ app.post('/api/register', async (req, res) => {
             }
         }
         
-        let newUser = new User({ mobile, password, pin, name, country, age, sex, balance: 50000, history: [], referralCode: newReferralCode, referredBy });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        let newUser = new User({ mobile, password: hashedPassword, pin, name, country, age, sex, balance: 50000, history: [], referralCode: newReferralCode, referredBy });
         await newUser.save();
-        res.json({ success: true, token: newUser._id, message: 'Registration successful!' });
+        
+        const token = jwt.sign({ userId: newUser._id }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ success: true, token, message: 'Registration successful!' });
     } catch (err) {
         res.json({ success: false, message: 'Database error.' });
     }
@@ -137,16 +160,28 @@ app.post('/api/login', async (req, res) => {
     const { mobile, password } = req.body;
     try {
         const user = await User.findOne({ mobile });
-        if (!user || user.password !== password) return res.json({ success: false, message: 'Invalid mobile or password.' });
+        if (!user) return res.json({ success: false, message: 'Invalid mobile or password.' });
         
-        res.json({ success: true, token: user._id, message: 'Login successful!' });
+        let isMatch = false;
+        if (user.password === password) {
+            isMatch = true;
+            user.password = await bcrypt.hash(password, 10);
+            await user.save();
+        } else {
+            isMatch = await bcrypt.compare(password, user.password);
+        }
+
+        if (!isMatch) return res.json({ success: false, message: 'Invalid mobile or password.' });
+        
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '30d' });
+        res.json({ success: true, token, message: 'Login successful!' });
     } catch (err) {
         res.json({ success: false, message: 'Database error.' });
     }
 });
 
 app.get('/api/user', async (req, res) => {
-    const userId = req.headers.authorization;
+    const userId = getUserIdFromAuth(req.headers.authorization);
     if (!userId) return res.json({ success: false });
     try {
         const user = await User.findById(userId);
@@ -165,7 +200,7 @@ app.get('/api/user', async (req, res) => {
 });
 
 app.post('/api/upload-avatar', async (req, res) => {
-    const userId = req.headers.authorization;
+    const userId = getUserIdFromAuth(req.headers.authorization);
     const { image } = req.body;
     if (!userId || !image) return res.json({ success: false });
     try {
@@ -183,16 +218,21 @@ app.post('/api/upload-avatar', async (req, res) => {
 });
 
 app.post('/api/user/change-password', async (req, res) => {
-    const userId = req.headers.authorization;
+    const userId = getUserIdFromAuth(req.headers.authorization);
     const { oldPassword, newPassword } = req.body;
     if (!userId || !oldPassword || !newPassword) return res.json({ success: false, message: 'Missing details.' });
     
     try {
         const user = await User.findById(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
-        if (user.password !== oldPassword) return res.json({ success: false, message: 'Old password is incorrect.' });
+
+        let isMatch = false;
+        if (user.password === oldPassword) isMatch = true;
+        else isMatch = await bcrypt.compare(oldPassword, user.password);
         
-        user.password = newPassword;
+        if (!isMatch) return res.json({ success: false, message: 'Old password is incorrect.' });
+        
+        user.password = await bcrypt.hash(newPassword, 10);
         await user.save();
         res.json({ success: true, message: 'Password updated successfully!' });
     } catch (e) {
@@ -201,7 +241,7 @@ app.post('/api/user/change-password', async (req, res) => {
 });
 
 app.post('/api/deposit', async (req, res) => {
-    const userId = req.headers.authorization;
+    const userId = getUserIdFromAuth(req.headers.authorization);
     const { amount, referenceNumber, receiptImage } = req.body;
     if (!userId || !amount || !referenceNumber || amount < 10) return res.json({ success: false, message: 'Invalid details or amount too low (Min $10).' });
     
@@ -209,13 +249,30 @@ app.post('/api/deposit', async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
 
+        let imageUrl = '';
+        if (receiptImage && receiptImage.startsWith('data:image')) {
+            try {
+                const matches = receiptImage.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+                if (matches && matches.length === 3) {
+                    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+                    const buffer = Buffer.from(matches[2], 'base64');
+                    const filename = `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+                    const filepath = path.join(uploadDir, filename);
+                    fs.writeFileSync(filepath, buffer);
+                    imageUrl = `/uploads/${filename}`;
+                }
+            } catch (err) {
+                console.error('Error saving image:', err);
+            }
+        }
+
         const newTx = new Transaction({
             userId,
             type: 'deposit',
             amount: parseFloat(amount),
             status: 'pending',
             referenceNumber,
-            receiptImage: receiptImage || ''
+            receiptImage: imageUrl
         });
         await newTx.save();
         io.emit('admin_alert', { type: 'deposit', amount: parseFloat(amount), mobile: user.mobile });
@@ -226,7 +283,7 @@ app.post('/api/deposit', async (req, res) => {
 });
 
 app.post('/api/withdraw', async (req, res) => {
-    const userId = req.headers.authorization;
+    const userId = getUserIdFromAuth(req.headers.authorization);
     const { amount, withdrawalAddress, pin } = req.body;
     if (!userId || !amount || !withdrawalAddress || !pin || amount < 10) return res.json({ success: false, message: 'Invalid details or amount too low (Min $10).' });
     
@@ -255,7 +312,7 @@ app.post('/api/withdraw', async (req, res) => {
 });
 
 app.get('/api/transactions', async (req, res) => {
-    const userId = req.headers.authorization;
+    const userId = getUserIdFromAuth(req.headers.authorization);
     if (!userId) return res.json({ success: false });
     try {
         const txs = await Transaction.find({ userId }).sort({ createdAt: -1 });
@@ -542,7 +599,7 @@ app.post('/api/admin/users/:id/password', adminAuth, async (req, res) => {
         const user = await User.findById(req.params.id);
         if (!user) return res.json({ success: false });
         
-        user.password = newPassword;
+        user.password = await bcrypt.hash(newPassword, 10);
         await user.save();
         res.json({ success: true });
     } catch (e) {
@@ -825,7 +882,7 @@ setInterval(() => {
 }, 100);
 
 io.on('connection', async (socket) => {
-  const userId = socket.handshake.query.userId;
+  const userId = getUserIdFromAuth(socket.handshake.query.userId);
 
   socket.emit('time_left', { period: currentPeriod, timeLeft });
   socket.emit('betting_frozen', isBettingFrozen);
