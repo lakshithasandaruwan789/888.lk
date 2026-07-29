@@ -358,8 +358,8 @@
             }
 
             historyList.slice(0, 20).forEach(bet => {
-                let isWin = bet.status === 'Won';
-                let isLoss = bet.status === 'Lost';
+                let isWin = bet.status.toLowerCase() === 'won';
+                let isLoss = bet.status.toLowerCase() === 'lost';
                 
                 let statusColor = isWin ? 'text-green-500 font-bold uppercase' : (isLoss ? 'text-red-500 font-bold uppercase' : 'text-yellow-500 font-bold uppercase');
                 
