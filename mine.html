@@ -353,5 +353,31 @@
             });
         }
     </script>
+
+    <script>
+        // Auto-logout after 5 minutes of inactivity
+        (function() {
+            let inactivityTimer;
+            const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+
+            function resetTimer() {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(logoutUser, INACTIVITY_LIMIT);
+            }
+
+            function logoutUser() {
+                localStorage.removeItem('userId');
+                window.location.href = 'login.html';
+            }
+
+            window.onload = resetTimer;
+            document.onmousemove = resetTimer;
+            document.onkeypress = resetTimer;
+            document.onclick = resetTimer;
+            document.onscroll = resetTimer;
+            document.ontouchstart = resetTimer;
+        })();
+    </script>
 </body>
 </html>
+
