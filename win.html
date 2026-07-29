@@ -146,6 +146,7 @@
                     <button id="btn-amt-10" onclick="setAmount(10)" class="border px-2 py-1 rounded border-blue-500 text-blue-500 font-bold amt-btn">10</button>
                     <button id="btn-amt-100" onclick="setAmount(100)" class="border px-2 py-1 rounded amt-btn">100</button>
                     <button id="btn-amt-1000" onclick="setAmount(1000)" class="border px-2 py-1 rounded amt-btn">1000</button>
+                    <button id="btn-amt-10000" onclick="setAmount(10000)" class="border px-2 py-1 rounded amt-btn">10000</button>
                 </div>
             </div>
             <div class="flex justify-between items-center mb-6">
@@ -156,7 +157,7 @@
                     <button onclick="adjustQty(1)" class="w-8 h-8 bg-gray-200 rounded font-bold">+</button>
                 </div>
             </div>
-            <p class="text-center font-bold mb-4">Total contract money is <span id="totalMoney" class="text-orange-500">10</span></p>
+            <p class="text-center font-bold mb-4">Total contract money is <span id="totalMoney" class="text-orange-500">10</span> <span class="text-green-500 text-sm">($<span id="totalMoneyUsd">0.10</span>)</span></p>
             <div class="flex gap-2">
                 <button onclick="closeBetModal()" class="w-1/2 py-2 text-gray-500 border rounded">CANCEL</button>
                 <button onclick="submitBet()" class="w-1/2 py-2 bg-blue-500 text-white rounded font-bold">CONFIRM</button>
@@ -255,7 +256,9 @@
 
         function setAmount(amt) {
             selectedAmount = amt;
-            document.getElementById('totalMoney').innerText = selectedAmount * qty;
+            const total = selectedAmount * qty;
+            document.getElementById('totalMoney').innerText = total;
+            document.getElementById('totalMoneyUsd').innerText = (total / 100).toFixed(2);
             
             document.querySelectorAll('.amt-btn').forEach(btn => {
                 btn.classList.remove('border-blue-500', 'text-blue-500', 'font-bold');
