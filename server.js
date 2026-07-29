@@ -675,8 +675,8 @@ async function processPayouts(winningResult) {
                   if (info.payoutTotal > 0) {
                       io.to(info.socketId).emit('bet_won', { payout: info.payoutTotal, newBalance: u.balance });
                   }
-                  io.to(info.socketId).emit('my_history_update', u.history);
                   io.to(info.socketId).emit('update_balance', u.balance);
+                  io.to(info.socketId).emit('my_history_update', u.history);
               }
           }
       } catch (err) {
