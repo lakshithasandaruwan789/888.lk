@@ -383,8 +383,8 @@
                 // If pending, payout is 0, if lost, payout is 0 but we might want to show -bet.amount. 
                 // Since they asked to see clearly if they lost, let's show -amount in red if lost.
                 let payoutText = '';
-                if (isWin) payoutText = `+$${(bet.payout || 0).toFixed(2)}`;
-                else if (isLoss) payoutText = `-$${(bet.amount || 0).toFixed(2)}`;
+                if (isWin) payoutText = `+$${((bet.payout || 0) / 100).toFixed(2)}`;
+                else if (isLoss) payoutText = `-$${((bet.amount || 0) / 100).toFixed(2)}`;
                 else payoutText = 'Pending...';
 
                 let payoutColor = isWin ? 'text-green-400' : (isLoss ? 'text-red-400' : 'text-gray-400');
