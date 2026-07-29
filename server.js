@@ -234,9 +234,9 @@ app.post('/api/withdraw', async (req, res) => {
         const user = await User.findById(userId);
         if (!user) return res.json({ success: false, message: 'User not found.' });
         if (user.pin !== pin) return res.json({ success: false, message: 'Incorrect Withdrawal PIN.' });
-        if (user.balance < parseFloat(amount)) return res.json({ success: false, message: 'Insufficient balance.' });
+        if (user.balance < parseFloat(amount) * 100) return res.json({ success: false, message: 'Insufficient balance.' });
 
-        user.balance -= parseFloat(amount);
+        user.balance -= parseFloat(amount) * 100;
         await user.save();
 
         const newTx = new Transaction({
@@ -427,11 +427,11 @@ app.post('/api/admin/transactions/:id/:action', adminAuth, async (req, res) => {
         
         if (tx.type === 'deposit') {
             if (action === 'approve') {
-                user.balance += tx.amount;
+                user.balance += tx.amount * 100;
             }
         } else if (tx.type === 'withdraw') {
             if (action === 'reject') {
-                user.balance += tx.amount; // refund balance on reject
+                user.balance += tx.amount * 100; // refund balance on reject
             }
         }
         
@@ -490,9 +490,9 @@ app.post('/api/admin/tx-revert/:id', adminAuth, async (req, res) => {
         if (!user) return res.json({ success: false, message: 'User not found.' });
         
         if (tx.type === 'deposit' && tx.status === 'approved') {
-            user.balance -= tx.amount;
+            user.balance -= tx.amount * 100;
         } else if (tx.type === 'withdraw' && tx.status === 'rejected') {
-            user.balance -= tx.amount;
+            user.balance -= tx.amount * 100;
         }
         
         tx.status = 'pending';
@@ -526,8 +526,8 @@ app.post('/api/admin/users/:id/balance', adminAuth, async (req, res) => {
         if (!user) return res.json({ success: false });
         
         const val = parseFloat(amount);
-        if (action === 'add') user.balance += val;
-        else if (action === 'subtract') user.balance -= val;
+        if (action === 'add') user.balance += val * 100;
+        else if (action === 'subtract') user.balance -= val * 100;
         
         await user.save();
         res.json({ success: true, newBalance: user.balance });

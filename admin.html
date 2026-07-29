@@ -686,7 +686,7 @@
                             <td class="font-bold text-white">${u.mobile}</td>
                             <td>${u.name || 'User'}</td>
                             <td>${u.country || 'Sri Lanka'}</td>
-                            <td class="text-green-400 font-bold">$ ${u.balance.toFixed(2)}</td>
+                            <td class="text-green-400 font-bold">$ ${(u.balance / 100).toFixed(2)}</td>
                             <td>${u.referralCount}</td>
                             <td><button onclick="openUserModal('${u._id}')" class="btn bg-blue-500 text-white">Manage</button></td>
                         </tr>
@@ -712,7 +712,7 @@
                     <div class="grid grid-cols-2 gap-2 text-white">
                         <div><strong>Mobile:</strong> ${u.mobile}</div>
                         <div><strong>Name:</strong> ${u.name || 'User'}</div>
-                        <div><strong>Balance:</strong> <span class="text-green-400">$ ${u.balance.toFixed(2)}</span></div>
+                        <div><strong>Balance:</strong> <span class="text-green-400">$ ${(u.balance / 100).toFixed(2)}</span></div>
                         <div><strong>Age/Sex:</strong> ${u.age || '-'} / ${u.sex || '-'}</div>
                     </div>
                 `;

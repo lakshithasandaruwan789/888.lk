@@ -85,7 +85,7 @@
         });
 
         function withdrawAll() {
-            document.getElementById('withAmount').value = maxBalance.toFixed(2);
+            document.getElementById('withAmount').value = (maxBalance / 100).toFixed(2);
         }
 
         document.getElementById('withdrawForm').addEventListener('submit', async (e) => {
