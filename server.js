@@ -667,6 +667,7 @@ async function processPayouts(winningResult) {
                   }
               });
               
+              u.markModified('history');
               await u.save();
               
               if (info.socketId) {
