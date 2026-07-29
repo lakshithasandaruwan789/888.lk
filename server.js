@@ -39,7 +39,7 @@ let forcedResult = null;
 let scheduledTimes = []; // Array of { id, timestamp, result: {number, colorLabel, colorKey} }
 let gameHistoryCache = [];
 let GAME_ALGORITHM = 'min_liability'; // Default algorithm
-let GAME_LOOP_SECONDS = 30;
+let GAME_LOOP_SECONDS = 60;
 let REFERRAL_BONUS = 500;
 let timeLeft = GAME_LOOP_SECONDS;
 let isBettingFrozen = false;
@@ -704,11 +704,20 @@ setInterval(async () => {
   
   let newTimeLeft = GAME_LOOP_SECONDS - (totalSeconds % GAME_LOOP_SECONDS);
   
+  if (newTimeLeft <= 10 && newTimeLeft > 2) {
+      if (!isBettingFrozen) {
+        isBettingFrozen = true;
+        io.emit('betting_frozen', true);
+      }
+  }
+
   if (newTimeLeft <= 2) {
     if (!isResolving) {
       isResolving = true;
-      isBettingFrozen = true;
-      io.emit('betting_frozen', true);
+      if (!isBettingFrozen) {
+        isBettingFrozen = true;
+        io.emit('betting_frozen', true);
+      }
 
       const result = calculateWinningResult();
       await processPayouts(result);
@@ -731,6 +740,7 @@ setInterval(async () => {
       // New round begins!
       isResolving = false;
       isBettingFrozen = false;
+      io.emit('betting_frozen', false);
       currentPeriod = getNextPeriodId();
       currentBets = [];
       broadcastAdminUpdate();

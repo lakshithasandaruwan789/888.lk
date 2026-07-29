@@ -170,6 +170,7 @@
     <script>
         // Authentication Check
         const USER_ID = localStorage.getItem('auth_token');
+        let clientBettingFrozen = false;
         
         if (!USER_ID) {
             document.getElementById('balance').innerText = '0.00';
@@ -187,9 +188,18 @@
 
         socket.on('time_left', (data) => {
             document.getElementById('periodDisplay').innerText = data.period;
+            let mins = Math.floor(data.timeLeft / 60);
             let secs = data.timeLeft % 60;
-            document.getElementById('timerDisplay').innerText = `00:${secs.toString().padStart(2, '0')}`;
+            document.getElementById('timerDisplay').innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             if(data.timeLeft === 0) closeBetModal();
+        });
+
+        socket.on('betting_frozen', (isFrozen) => {
+            clientBettingFrozen = isFrozen;
+            if (isFrozen) {
+                closeBetModal();
+                showToast('Betting is now locked for this round!');
+            }
         });
 
         socket.on('history_update', (historyData) => {
@@ -224,6 +234,10 @@
         function openBetModal(type, value) {
             if (!USER_ID) {
                 window.location.href = 'login.html';
+                return;
+            }
+            if (clientBettingFrozen) {
+                showToast('Betting is locked for the last 10 seconds!');
                 return;
             }
             betType = type;
@@ -400,7 +414,6 @@
                 clearTimeout(inactivityTimer);
                 inactivityTimer = setTimeout(logoutUser, INACTIVITY_LIMIT);
             }
-
             function logoutUser() {
                 localStorage.removeItem('userId');
                 window.location.href = 'login.html';
@@ -415,5 +428,4 @@
         })();
     </script>
 </body>
-</html>
 
