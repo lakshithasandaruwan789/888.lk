@@ -105,16 +105,10 @@
 
             <!-- My Record View -->
             <div id="view-my-record" class="hidden">
-                <div class="grid grid-cols-5 p-3 text-center border-b border-[#1a2942] text-[10px] font-bold text-gray-300 uppercase">
-                    <div>Period</div>
-                    <div>Select</div>
-                    <div>Amount</div>
-                    <div>Status</div>
-                    <div>Payout</div>
-                </div>
-                <div id="my-history-table" class="divide-y divide-[#1a2942] text-center text-[11px] font-medium">
+                <!-- Header removed for cleaner list view -->
+                <div id="my-history-table" class="divide-y divide-[#1a2942]">
                     <!-- Populated by JS -->
-                    <div class="p-6 text-gray-500">No bets yet.</div>
+                    <div class="p-6 text-center text-gray-500">No bets yet.</div>
                 </div>
             </div>
         </div>
@@ -359,23 +353,37 @@
             myTable.innerHTML = '';
             
             if (!historyList || historyList.length === 0) {
-                myTable.innerHTML = '<div class="p-6 text-gray-500">No bets yet.</div>';
+                myTable.innerHTML = '<div class="p-6 text-center text-gray-500">No bets yet.</div>';
                 return;
             }
 
             historyList.slice(0, 20).forEach(bet => {
-                let statusColor = bet.status === 'Won' ? 'text-green-500 font-bold' : (bet.status === 'Lost' ? 'text-red-500' : 'text-yellow-500');
-                let payoutText = bet.payout > 0 ? `+${bet.payout.toFixed(2)}` : '0.00';
+                let isWin = bet.status === 'Won';
+                let isLoss = bet.status === 'Lost';
+                
+                let statusColor = isWin ? 'text-green-500 font-bold uppercase' : (isLoss ? 'text-red-500 font-bold uppercase' : 'text-yellow-500 font-bold uppercase');
+                
+                // If pending, payout is 0, if lost, payout is 0 but we might want to show -bet.amount. 
+                // Since they asked to see clearly if they lost, let's show -amount in red if lost.
+                let payoutText = '';
+                if (isWin) payoutText = `+$${bet.payout.toFixed(2)}`;
+                else if (isLoss) payoutText = `-$${bet.amount.toFixed(2)}`;
+                else payoutText = 'Pending...';
+
+                let payoutColor = isWin ? 'text-green-400' : (isLoss ? 'text-red-400' : 'text-gray-400');
                 
                 let selectLabel = bet.type === 'color' ? `<span class="${bet.value === 'Green' ? 'text-green-500' : (bet.value === 'Red' ? 'text-red-500' : 'text-purple-500')} font-bold">${bet.value}</span>` : `<span class="font-bold">#${bet.value}</span>`;
 
                 myTable.innerHTML += `
-                    <div class="grid grid-cols-5 p-3 hover:bg-[#1a2942] transition items-center">
-                        <div>...${bet.period.toString().slice(-4)}</div>
-                        <div>${selectLabel}</div>
-                        <div>${bet.amount}</div>
-                        <div class="${statusColor}">${bet.status}</div>
-                        <div class="${bet.payout > 0 ? 'text-green-400 font-bold' : 'text-gray-400'}">${payoutText}</div>
+                    <div class="flex justify-between items-center p-4 hover:bg-[#1a2942] transition bg-[#0d1727] mb-1 rounded">
+                        <div class="flex flex-col text-left">
+                            <span class="text-xs text-gray-400 font-mono">Period: ${bet.period}</span>
+                            <span class="text-sm font-bold mt-1 text-white">Bet $${bet.amount} on ${selectLabel}</span>
+                        </div>
+                        <div class="flex flex-col text-right">
+                            <span class="${statusColor} text-xs tracking-wider">${bet.status}</span>
+                            <span class="${payoutColor} font-black text-lg mt-1">${payoutText}</span>
+                        </div>
                     </div>
                 `;
             });
