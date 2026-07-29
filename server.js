@@ -938,6 +938,7 @@ io.on('connection', async (socket) => {
         currentBets.push({ userId, socketId: socket.id, betId, type, value, amount, period: currentPeriod });
         
         socket.emit('my_history_update', user.history);
+        socket.emit('update_balance', user.balance);
         broadcastAdminUpdate(); 
         
         callback({ success: true, newBalance: user.balance });
